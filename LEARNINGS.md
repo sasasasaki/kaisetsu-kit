@@ -20,6 +20,8 @@ Techniques we picked up, newest first. Each entry says why it matters and how th
   How: `beats.js` ends every layer at the next shot change; only a section carrier (`slot`) survives.
 - **A carrier appears when its first entry is written.** An empty ledger hanging on screen for half a minute was the first thing the reviewer disliked.
 - **Write the English with the word.** Every written word, tag, ledger entry, inset caption and board label carries an `en` line, so an English cut needs no new images.
+- **Rolling it out to a whole film needs new pictures, not just new code.** A 4-minute section on three images leaves the camera nothing to point at; each section of our first film got 4–8 new metaphor images (no characters, so regions are easy to name), placed as extra shots on the line they explain.
+- **Two bugs found only at film scale:** a ledger collected entries from every section (scope fills to their section), and a strike through a tag was hidden by the tag itself (draw brush marks after words and tags).
 - **Brush marks should look like brush marks.** Circles and strikes use the same stroke model as the title calligraphy (pressure at the start, dry-brush streaks at the end) in cinnabar; the reviewer singled this out as the best part.
 
 ## 2026-10-09 — from studying cclank/lanshu-create-ai-presenter-video and ChenShuo2004/cs-skills

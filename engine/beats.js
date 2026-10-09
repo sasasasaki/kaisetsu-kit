@@ -24,7 +24,7 @@ function xbInit() {
   sorted.filter(b => b.do === "clear").forEach(c => sorted.forEach(b => { if (b !== c && b.id && c.ids.includes(b.id) && b.t < c.t && b.t1 > c.t) b.t1 = c.t; }));
   const cuts = SHOTS.map(s => s.t0).sort((a, b) => a - b);
   sorted.forEach(b => {
-    if (b.do === "slot") { const f = sorted.find(z => z.do === "fill"); if (f) b.t = f.t - 0.05; return; }
+    if (b.do === "slot") { const f = sorted.find(z => z.do === "fill" && z.sec === b.sec); if (f) b.t = f.t - 0.05; return; }
     const c = cuts.find(c => c > b.t + 0.05); if (c === undefined) return;
     b.cut = c; b.t1 = Math.min(b.t1, Math.max(b.t + 0.3, c - 0.35));
   });
@@ -126,7 +126,7 @@ function xbStrike(g, b, t) {
   else xbBrushLine(g, r[0] - 10, r[3] - 0.15 * (r[3] - r[1]), r[2] + 10, r[1] + 0.15 * (r[3] - r[1]), k, RED, 18, 4);
   g.restore();
 }
-function xbCircle(g, b, t) {
+function xbCircle(g, b, t) {   // rect [x0,y0,x1,y1] (0-1 screen) for things that are not on a camera-tracked image (summary images, diagrams)
   const r = b.rect ? b.rect.map((v, i) => v * (i % 2 ? H : W)) : xbRect(b.img, b.box, t); if (!r) return;
   const k = eOut((t - b.t) / 0.6), a = 1 - sat((t - b.t1) / 0.5); if (a <= 0) return;
   const cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2, rx = (r[2] - r[0]) / 2 + 18, ry = (r[3] - r[1]) / 2 + 14;
@@ -159,8 +159,8 @@ function xbInset(g, b, t) {
 }
 function xbSlot(g, b, t) {
   const a = eOut((t - b.t) / 0.5) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
-  const x = W - 330, y = 390, w = 280, rh = 170, top = b.en ? 92 : 70;
-  const fills = XB.list.filter(z => z.do === "fill" && t >= z.t), rows = fills.length ? Math.max(...fills.map(z => z.slot)) + 1 : 0;
+  const x = b.x ?? W - 330, y = b.y ?? 390, w = 280, rh = b.rh ?? 170, top = b.en ? 92 : 70;   // ledger position and row height can be set per section
+  const fills = XB.list.filter(z => z.do === "fill" && z.sec === b.sec && t >= z.t), rows = fills.length ? Math.max(...fills.map(z => z.slot)) + 1 : 0;
   const grow = rows ? lerp(rows - 1, rows, eOut((t - fills.filter(z => z.slot === rows - 1)[0].t) / 0.4)) : 0, bh = top + rh * grow;
   g.save(); g.globalAlpha = a * 0.94; g.fillStyle = PAPER; g.shadowColor = "rgba(30,20,10,0.3)"; g.shadowBlur = 20; g.fillRect(x, y, w, bh); g.restore();
   hair(g, x, y, x, y + bh, a, RED, 5);
@@ -169,7 +169,7 @@ function xbSlot(g, b, t) {
   for (let i = 0; i < rows; i++) {
     const yy = y + top + i * rh; hair(g, x + 20, yy, x + w - 20, yy, 0.25 * a);
     txt(g, "①②③④"[i], x + 34, yy + 46, 34, { align: "center", fam: MIND, color: RED, alpha: a });
-    const f = XB.list.filter(z => z.do === "fill" && z.slot === i && t >= z.t);
+    const f = XB.list.filter(z => z.do === "fill" && z.sec === b.sec && z.slot === i && t >= z.t);
     f.forEach((z, j) => { const fa = a * eOut((t - z.t) / 0.4); txt(g, z.text, x + 64, yy + 42 + j * 64, 26, { fam: MIND, alpha: fa, color: z.color === "red" ? RED : INK }); if (z.en) txt(g, z.en, x + 64, yy + 68 + j * 64, 18, { fam: LAT, color: EN, alpha: fa }); });
     const lit = f.length ? 1 - sat((t - f[f.length - 1].t - 1.2) / 0.6) : 0;
     if (lit > 0) { g.save(); g.globalAlpha = 0.12 * lit * a; g.fillStyle = RED; g.fillRect(x + 6, yy + 2, w - 12, rh - 4); g.restore(); }
@@ -207,7 +207,7 @@ function xbBoard2(g, b, t) {
   });
 }
 const XB_DRAW = { write: xbWrite, strike: xbStrike, circle: xbCircle, tag: xbTag, inset: xbInset, slot: xbSlot, paper: xbPaper, formula: xbFormula, board2: xbBoard2 };
-const XB_ORDER = ["paper", "inset", "formula", "board2", "circle", "strike", "tag", "write", "slot"];
+const XB_ORDER = ["paper", "inset", "formula", "board2", "tag", "write", "circle", "strike", "slot"];   // brush marks go over words and tags (striking a tag must not be hidden by the tag)
 function xbDraw(g, t) {
   xbInit();
   for (const kind of XB_ORDER) for (const b of XB.list) if (b.do === kind && t >= b.t - 0.05 && t < b.t1 + 0.6 && !(b.cut && t >= b.cut)) XB_DRAW[kind](g, b, t);
