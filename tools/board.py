@@ -96,7 +96,7 @@ def build(root):
             for i, c in enumerate(grp):
                 c['f'] = round(i / len(grp), 2)
     tris = [{'sec': r[0], 'k': B.K(r[0], r[1]), 'zh': r[2], 'ja': r[3], 'en': r[4], 'mode': r[5], **({'src': r[6]} if len(r) > 6 else {})} for r in N.get('tris', [])]
-    beats = N.get('beats', [])
+    beats = N.get('beats', []) + (rj(root / 'beats_zmarks.json') if (root / 'beats_zmarks.json').exists() else [])   # tools/fill_marks.py
     for b in beats:   # a beat fires on a substring of its line; a rewrite that drops the phrase fails here instead of silently drifting
         line = B.lines[b['sec']][b['k']]
         for f in ('at', 'fixAt', 'rightAt', 'stoneAt'):

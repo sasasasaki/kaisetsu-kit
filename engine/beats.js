@@ -5,6 +5,9 @@
 // Named boxes on a scene image: assets/regions.json {"kv/x": {"w":..,"h":..,"r": {"bar": [x0,y0,x1,y1] (0-1)}}}; boxes follow the push/pull.
 // Rules learned in production: a cut clears every layer stacked on the previous shot (slot excepted); a carrier (slot) appears only when its
 // first entry is written; every written word/tag carries an English line (`en`); circles and strikes use the same brush as the title calligraphy.
+// Placement: tags, written words and insets stay out of the subtitle box (tallest subtitle while they show), off the edges and header, clear of
+// cards, tri bands and the faces of the current shot (assets/faces.json through the push/pull), searching the nearest free spot.
+// `mark` underlines a spoken word inside the subtitle (gap filler; tools/fill_marks.py).
 const XB = { list: [], align: {}, regions: {}, ready: false };
 const TEA = "#7a5a32";
 
@@ -18,13 +21,14 @@ function xbInit() {
   const secEnd = s => TL.secs[s][1];
   sorted.forEach(b => {
     const L = LN[b.sec][b.k];
-    b.t1 = b.until !== undefined ? b.t + b.until : b.hold === "sec" ? secEnd(b.sec) - 0.8 : b.hold === "next" ? null : L.at + L.len + (b.hold ?? 0.6);
+    b.t1 = b.until !== undefined ? b.t + b.until : b.hold === "sec" ? secEnd(b.sec) - 0.8 : b.hold === "next" ? null : Math.max(b.t + 1.4, L.at + L.len + (b.hold ?? 0.6));
   });
   sorted.forEach((b, i) => { if (b.t1 === null) { const nx = sorted.slice(i + 1).find(x => x.do === b.do && (x.slot ?? x.id) === (b.slot ?? b.id)); b.t1 = nx ? nx.t - 0.1 : TL.secs[b.sec][1] - 0.8; } });
   sorted.filter(b => b.do === "clear").forEach(c => sorted.forEach(b => { if (b !== c && b.id && c.ids.includes(b.id) && b.t < c.t && b.t1 > c.t) b.t1 = c.t; }));
   const cuts = SHOTS.map(s => s.t0).sort((a, b) => a - b);
   sorted.forEach(b => {
     if (b.do === "slot") { const f = sorted.find(z => z.do === "fill" && z.sec === b.sec); if (f) b.t = f.t - 0.05; return; }
+    if (b.do === "mark") return;
     const c = cuts.find(c => c > b.t + 0.05); if (c === undefined) return;
     b.cut = c; b.t1 = Math.min(b.t1, Math.max(b.t + 0.3, c - 0.35));
   });
@@ -34,7 +38,7 @@ function xbInit() {
 function xbTime(b) {
   const L = LN[b.sec][b.k]; if (!b.at) return L.at + (b.dt || 0);
   const A = XB.align[L.id], base = L.at - (L.lead || 0);
-  if (!A) return L.at + L.len * (b.frac || 0) + (b.dt || 0);   // no alignment: board.py stored the phrase position as a fraction of the line
+  if (!A) return L.at + L.len * (b.frac || 0) + (b.dt || 0);
   const i = A.text.indexOf(b.at); if (i < 0) throw new Error(`beat「${b.at}」not in ${L.id}`);
   return base + A.t[i] + (b.dt || 0);
 }
@@ -42,7 +46,8 @@ function xbTime(b) {
 function xbCover(img, box, fill) {
   const R = XB.regions[img], w = R?.w || 1672, h = R?.h || 941, s0 = Math.max(W / w, H / h);
   const bw = (box[2] - box[0]) * w * s0, bh = (box[3] - box[1]) * h * s0;
-  const z = clamp(Math.min(fill * H / bh, fill * W / bw), 1.0, 1.42), dw = w * s0 * z, dh = h * s0 * z;
+  const z = clamp(Math.min(fill * H / bh, fill * W / bw), 1.12, 1.42)
+  , dw = w * s0 * z, dh = h * s0 * z;
   const uc = (box[0] + box[2]) / 2, vc = (box[1] + box[3]) / 2;
   const fx = dw > W ? sat((W / 2 - uc * dw) / (W - dw)) : 0.5, fy = dh > H ? sat((H / 2 - vc * dh) / (H - dh)) : 0.5;
   return [z, fx, fy];
@@ -85,10 +90,36 @@ function xbWhere(b, t) {
 }
 
 function xbEn(g, s, x, y, fs, a) { if (s) txt(g, s, x, y, fs, { align: "center", fam: LAT, color: EN, alpha: a }); }
+function xbSubTop(g, t0, t1) {
+  let top = H - 30;
+  for (const s of TL.subs) {
+    if (s[1] <= t0 || s[0] >= t1) continue;
+    const sh = SHOTS.find(x => s[0] >= x.t0 && s[0] < x.t1), bw = sh && sh.type === "manga" ? 1030 : 1320, chip = 118;
+    g.save(); font(g, 27, LAT); const es = s[4] ? wrapWords(g, s[4], bw - chip - 50) : [];
+    font(g, 40, GO, "bold"); const ls = wrap(g, s[2], bw - chip - 50); g.restore();
+    top = Math.min(top, 1050 - (42 + ls.length * 54 + (es.length ? 10 + es.length * 36 : 0)) - 34);
+  }
+  return top;
+}
+function xbFit(g, b, x0, y0, x1, y1) {
+  const L = 24, T = 64, R = W - 24, B = (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14;
+  const bx = x0 < L ? L - x0 : x1 > R ? R - x1 : 0, by = y1 > B ? Math.max(T - y0, B - y1) : y0 < T ? T - y0 : 0;
+  const free = (dx, dy) => x0 + dx >= L - 0.5 && x1 + dx <= R + 0.5 && y0 + dy >= T - 0.5 && y1 + dy <= B + 0.5 && !XB.placed.some(p => x0 + dx < p[2] + 6 && x1 + dx > p[0] - 6 && y0 + dy < p[3] + 6 && y1 + dy > p[1] - 6);
+  let best = [bx, by];
+  if (!free(bx, by)) {
+    const C = [];
+    for (let ix = -8; ix <= 8; ix++) for (let iy = -10; iy <= 10; iy++) C.push([bx + ix * 60, by + iy * 30]);
+    C.sort((a, b) => Math.hypot(a[0] - bx, (a[1] - by) * 1.4) - Math.hypot(b[0] - bx, (b[1] - by) * 1.4));
+    best = C.find(c => free(c[0], c[1])) || best;
+  }
+  XB.placed.push([x0 + best[0], y0 + best[1], x1 + best[0], y1 + best[1]]);
+  return best;
+}
 function xbPaperPatch(g, x, y, w, h, a) { g.save(); g.globalAlpha = a * 0.86; g.shadowColor = "rgba(40,30,20,0.25)"; g.shadowBlur = 24; g.fillStyle = PAPER; g.fillRect(x, y, w, h); g.restore(); }
 function xbWrite(g, b, t) {
-  const wh = xbWhere(b, t); if (!wh) return; const [x, y] = wh, size = b.size || 96, s = [...b.text], gap = size * 1.02, a = 1 - sat((t - b.t1) / 0.5);
+  const wh = xbWhere(b, t); if (!wh) return; const size = b.size || 96, s = [...b.text], gap = size * 1.02, a = 1 - sat((t - b.t1) / 0.5);
   const efs = Math.round(clamp(size * 0.22, 22, 34)); font(g, efs, LAT); const ew = b.en ? g.measureText(b.en).width : 0;
+  const hw = (Math.max(s.length * gap, ew) + 60) / 2, [fx, fy] = xbFit(g, b, wh[0] - hw, wh[1] - size * 0.75, wh[0] + hw, wh[1] + size * 0.75 + (b.en ? efs + 18 : 0)), x = wh[0] + fx, y = wh[1] + fy;
   if (b.patch !== false) { const pw = Math.max(s.length * gap, ew) + 60; xbPaperPatch(g, x - pw / 2, y - size * 0.75, pw, size * 1.5 + (b.en ? efs + 18 : 0), a * sat((t - b.t + 0.1) / 0.3)); }
   g.save(); g.globalAlpha = a;
   let tt = b.t;
@@ -126,7 +157,7 @@ function xbStrike(g, b, t) {
   else xbBrushLine(g, r[0] - 10, r[3] - 0.15 * (r[3] - r[1]), r[2] + 10, r[1] + 0.15 * (r[3] - r[1]), k, RED, 18, 4);
   g.restore();
 }
-function xbCircle(g, b, t) {   // rect [x0,y0,x1,y1] (0-1 screen) for things that are not on a camera-tracked image (summary images, diagrams)
+function xbCircle(g, b, t) {
   const r = b.rect ? b.rect.map((v, i) => v * (i % 2 ? H : W)) : xbRect(b.img, b.box, t); if (!r) return;
   const k = eOut((t - b.t) / 0.6), a = 1 - sat((t - b.t1) / 0.5); if (a <= 0) return;
   const cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2, rx = (r[2] - r[0]) / 2 + 18, ry = (r[3] - r[1]) / 2 + 14;
@@ -135,10 +166,13 @@ function xbCircle(g, b, t) {   // rect [x0,y0,x1,y1] (0-1 screen) for things tha
   xbInk(g, pts, k, b.color === "tea" ? TEA : CINNABAR, 11, sd, a);
 }
 function xbTag(g, b, t) {
-  const wh = xbWhere(b, t); if (!wh) return; const [x, y] = wh, a = eOut((t - b.t) / 0.35) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
+  let wh = xbWhere(b, t); if (!wh) return; const a = eOut((t - b.t) / 0.35) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
   const fs = b.size || 38, efs = Math.round(fs * 0.58); font(g, fs, MIND); let w = g.measureText(b.text).width + 44;
   if (b.en) { font(g, efs, LAT); w = Math.max(w, g.measureText(b.en).width + 44); }
   const eh = b.en ? efs + 10 : 0, h = fs + 26 + eh, col = b.color === "red" ? RED : TEA;
+  if (b.side === "bottom" && b.img) wh = [wh[0], wh[1] - 52 + 18 + h];
+  if (b.side === "bottom" && wh[1] > (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14) wh = xbWhere({ ...b, side: "top" }, t) || wh;
+  const [fx, fy] = xbFit(g, b, wh[0] - w / 2, wh[1] - h, wh[0] + w / 2, wh[1]), x = wh[0] + fx, y = wh[1] + fy;
   const yy = y - h * (1 - eOut((t - b.t) / 0.35)) * 0.3;
   g.save(); g.globalAlpha = a * 0.93; g.fillStyle = PAPER; g.shadowColor = "rgba(30,20,10,0.3)"; g.shadowBlur = 16; g.fillRect(x - w / 2, yy - h, w, h); g.shadowBlur = 0;
   g.fillStyle = col; g.fillRect(x - w / 2, yy - h, 6, h); g.restore();
@@ -151,7 +185,8 @@ function xbInset(g, b, t) {
   let sx = 0, sy = 0, sw = im.width, sh2 = im.height;
   if (b.cols) { sw = im.width / b.cols; sx = sw * b.cell; }
   if (b.box) { const r = XB.regions[b.img]?.r?.[b.box]; if (r) { sx = r[0] * im.width; sy = r[1] * im.height; sw = (r[2] - r[0]) * im.width; sh2 = (r[3] - r[1]) * im.height; } }
-  const [cx, cy] = [b.pos[0] * W, b.pos[1] * H], w = b.w || 420, h = w * sh2 / sw, dy = (1 - eOut((t - b.t) / 0.45)) * 60;
+  const hmax = b.hmax || 300, w = Math.min(b.w || 420, hmax * sw / sh2), h = w * sh2 / sw, dy = (1 - eOut((t - b.t) / 0.45)) * 60;
+  const [fx, fy] = xbFit(g, b, b.pos[0] * W - w / 2 - 12, b.pos[1] * H - h / 2 - 12, b.pos[0] * W + w / 2 + 12, b.pos[1] * H + h / 2 + 12 + (b.caption ? 60 : 0) + (b.en ? 34 : 0)), cx = b.pos[0] * W + fx, cy = b.pos[1] * H + fy;
   g.save(); g.globalAlpha = a; g.shadowColor = "rgba(30,20,10,0.35)"; g.shadowBlur = 26; g.fillStyle = PAPER; g.fillRect(cx - w / 2 - 12, cy - h / 2 - 12 + dy, w + 24, h + 24); g.shadowBlur = 0;
   g.drawImage(im, sx, sy, sw, sh2, cx - w / 2, cy - h / 2 + dy, w, h); g.restore();
   if (b.caption) txt(g, b.caption, cx, cy + h / 2 + 52 + dy, 30, { align: "center", fam: MIND, alpha: a });
@@ -159,7 +194,7 @@ function xbInset(g, b, t) {
 }
 function xbSlot(g, b, t) {
   const a = eOut((t - b.t) / 0.5) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
-  const x = b.x ?? W - 330, y = b.y ?? 390, w = 280, rh = b.rh ?? 170, top = b.en ? 92 : 70;   // ledger position and row height can be set per section
+  const x = b.x ?? W - 330, y = b.y ?? 390, w = 280, rh = b.rh ?? 170, top = b.en ? 92 : 70;
   const fills = XB.list.filter(z => z.do === "fill" && z.sec === b.sec && t >= z.t), rows = fills.length ? Math.max(...fills.map(z => z.slot)) + 1 : 0;
   const grow = rows ? lerp(rows - 1, rows, eOut((t - fills.filter(z => z.slot === rows - 1)[0].t) / 0.4)) : 0, bh = top + rh * grow;
   g.save(); g.globalAlpha = a * 0.94; g.fillStyle = PAPER; g.shadowColor = "rgba(30,20,10,0.3)"; g.shadowBlur = 20; g.fillRect(x, y, w, bh); g.restore();
@@ -168,9 +203,9 @@ function xbSlot(g, b, t) {
   xbEn(g, b.en, x + w / 2, y + 78, 20, a);
   for (let i = 0; i < rows; i++) {
     const yy = y + top + i * rh; hair(g, x + 20, yy, x + w - 20, yy, 0.25 * a);
-    txt(g, "①②③④"[i], x + 34, yy + 46, 34, { align: "center", fam: MIND, color: RED, alpha: a });
+    txt(g, "①②③④"[i], x + 34, yy + 46, 34, { align: "center", fam: MIND, color: RED, alpha: a * sat((grow - i - 0.6) / 0.4) });
     const f = XB.list.filter(z => z.do === "fill" && z.sec === b.sec && z.slot === i && t >= z.t);
-    f.forEach((z, j) => { const fa = a * eOut((t - z.t) / 0.4); txt(g, z.text, x + 64, yy + 42 + j * 64, 26, { fam: MIND, alpha: fa, color: z.color === "red" ? RED : INK }); if (z.en) txt(g, z.en, x + 64, yy + 68 + j * 64, 18, { fam: LAT, color: EN, alpha: fa }); });
+    f.forEach((z, j) => { const fa = a * eOut((t - z.t) / 0.4) * sat((grow - i - 0.6) / 0.4); txt(g, z.text, x + 64, yy + 42 + j * 64, 26, { fam: MIND, alpha: fa, color: z.color === "red" ? RED : INK }); if (z.en) txt(g, z.en, x + 64, yy + 68 + j * 64, 18, { fam: LAT, color: EN, alpha: fa }); });
     const lit = f.length ? 1 - sat((t - f[f.length - 1].t - 1.2) / 0.6) : 0;
     if (lit > 0) { g.save(); g.globalAlpha = 0.12 * lit * a; g.fillStyle = RED; g.fillRect(x + 6, yy + 2, w - 12, rh - 4); g.restore(); }
   }
@@ -207,9 +242,18 @@ function xbBoard2(g, b, t) {
   });
 }
 const XB_DRAW = { write: xbWrite, strike: xbStrike, circle: xbCircle, tag: xbTag, inset: xbInset, slot: xbSlot, paper: xbPaper, formula: xbFormula, board2: xbBoard2 };
-const XB_ORDER = ["paper", "inset", "formula", "board2", "tag", "write", "circle", "strike", "slot"];   // brush marks go over words and tags (striking a tag must not be hidden by the tag)
+const XB_ORDER = ["paper", "inset", "formula", "board2", "tag", "write", "circle", "strike", "slot"];
 function xbDraw(g, t) {
-  xbInit();
+  xbInit(); XB.placed = [];
+  const sh = SHOTS.find(s => s.type === "scene" && !s.sum && t >= s.t0 && t < s.t1), fc = sh && typeof facesOf === "function" && facesOf(sh.img);
+  const papered = XB.list.some(b => b.do === "paper" && t >= b.t && t < b.t1 + 0.3);
+  if (fc && !papered) {
+    const [z, fx, fy] = kenOf(sh, t), k = Math.max(W / fc.w, H / fc.h) * z, dw = fc.w * k, dh = fc.h * k, ox = (W - dw) * fx, oy = (H - dh) * fy;
+    for (const f of fc.f) XB.placed.push([ox + f[0] * dw - 16, oy + f[1] * dh - 16, ox + f[2] * dw + 16, oy + f[3] * dh + 16]);
+  }
+  if (typeof TRIS !== "undefined") for (const c of TRIS) if (t >= c.t0 - 0.2 && t < c.t1 + 0.4) XB.placed.push(c.mode === "band" ? [0, 760, W, H] : [40, 86, 1240, 356]);
+  if (typeof cardsInit === "function") { cardsInit(); for (const c of CARDS) if (t >= c.t0 - 0.2 && t < c.t1 + 0.4) {
+    const k = c.compact ? 0.8 : 1, [x, y] = c.compact ? [W - 600 * k - 34, 58] : c.pos; XB.placed.push([x - 10, y - 10, x + 600 * k + 10, y + 250 * k + 10]); } }
   for (const kind of XB_ORDER) for (const b of XB.list) if (b.do === kind && t >= b.t - 0.05 && t < b.t1 + 0.6 && !(b.cut && t >= b.cut)) XB_DRAW[kind](g, b, t);
 }
 let xbPre = null;
@@ -221,3 +265,17 @@ const xbRender0 = window.renderAt;
 window.renderAt = async t => { await xbPreload(); return xbRender0(t); };
 const xbChrome0 = chrome;
 chrome = function (g, t, sh) { xbDraw(g, t); xbChrome0(g, t, sh); };
+function xbMark(g, b, t) {
+  const s = TL.subs.find(x => t >= x[0] && t < x[1]); if (!s || !s[2].includes(b.at)) return;
+  if (typeof TRIS !== "undefined" && TRIS.some(c => c.mode === "band" && t >= c.t0 - 0.3 && t < c.t1 + 0.4)) return;
+  const a = sat((t - s[0]) / 0.18) * sat((s[1] - t) / 0.18) * (1 - sat((t - b.t1) / 0.4)); if (a <= 0) return;
+  const sh = SHOTS.find(x => t >= x.t0 && t < x.t1), manga = sh && sh.type === "manga";
+  const bx = manga ? 820 : 300, bw = manga ? 1030 : 1320, chip = 118, en = s[4];
+  font(g, 27, LAT); const es = en ? wrapWords(g, en, bw - chip - 50) : [];
+  font(g, 40, GO, "bold"); const ls = wrap(g, s[2], bw - chip - 50), bh = 42 + ls.length * 54 + (es.length ? 10 + es.length * 36 : 0), by = 1050 - bh;
+  const i = ls.findIndex(l => l.includes(b.at)); if (i < 0) return;
+  const x0 = bx + chip + 18 + g.measureText(ls[i].slice(0, ls[i].indexOf(b.at))).width, w = g.measureText(b.at).width, y = by + 64 + i * 54 + 9;
+  g.save(); g.globalAlpha = a; xbBrushLine(g, x0 - 4, y, x0 + w + 4, y, eOut((t - b.t) / 0.4), RED, 5, 3); g.restore();
+}
+const xbSub0 = subtitle;
+subtitle = function (g, t) { xbSub0(g, t); for (const b of XB.list) if (b.do === "mark" && t >= b.t - 0.05 && t < b.t1 + 0.5) xbMark(g, b, t); };

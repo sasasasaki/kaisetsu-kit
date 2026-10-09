@@ -18,6 +18,7 @@ step explainer: overlap checks
 $PY tools/qc_cards.py example
 $PY tools/qc_cards.py example --subs 1.0
 $PY tools/beat_gaps.py example
+$PY tools/qc_layout.py example 0.5
 step explainer: stills, video, verify
 rm -f projects/example/qc/still-*.jpg
 $PY tools/render.py example stills auto

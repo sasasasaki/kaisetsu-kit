@@ -132,15 +132,6 @@ async def video(n):
     print('done', total, 'frames')
 
 
-def alive(pid):
-    if os.name == 'nt':
-        return str(pid) in subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True).stdout
-    try:
-        os.kill(pid, 0); return True
-    except OSError:
-        return False
-
-
 if __name__ == '__main__':
     mode = ARGS[0]
     if mode == 'stills':
@@ -148,14 +139,9 @@ if __name__ == '__main__':
     elif mode == 'sheet':
         asyncio.run(sheet(float(ARGS[1]) if len(ARGS) > 1 else 6.0))
     elif mode == 'video':
-        LOCK = REPO / '.render.lock'
-        while LOCK.exists() and alive(int(LOCK.read_text().split()[0])):
-            print('waiting for render lock held by', LOCK.read_text().strip(), flush=True); time.sleep(30)
-        LOCK.write_text(f'{os.getpid()} {PROJ}')
-        try:
-            asyncio.run(video(int(ARGS[1]) if len(ARGS) > 1 else 3))
-        finally:
-            LOCK.unlink(missing_ok=True)
+        from runlock import heavy   # one heavy browser job per machine, taken atomically
+        with heavy(f'{PROJ} video'):
+            asyncio.run(video(min(3, int(ARGS[1]) if len(ARGS) > 1 else 3)))   # more than 3 workers starved the machine
     elif mode == 'mux':
         mux()
     else:

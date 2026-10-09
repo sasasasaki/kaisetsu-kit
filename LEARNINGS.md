@@ -2,6 +2,22 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-10 — layout QC, and why it needs its own checker
+
+- **Text off-screen, out of its card, under the subtitle, or on a face is the most visible mistake in a choreographed explainer.**
+  Why: the reviewer found a reading running off a vocab card, a tag pinned under a region that the camera had pushed below the subtitle, and
+  labels covering faces once the metaphor images were redrawn with the cast in them.
+  How: `tools/qc_layout.py` steps through the film, records every piece of text drawn on the main canvas with its transformed box and every
+  paper panel, and reports offscreen / overflow / undersub / overlap with a screenshot per issue. Smoke runs it. A page error stops it (a broken
+  script hides whole layers, which once made the check report zero).
+- **Placement searches for a free spot instead of nudging.** Tags, written words and insets avoid the subtitle box (the tallest subtitle
+  while they show), the edges and header, vocab cards, tri bands and the current shot's faces (faces.json projected through the push/pull);
+  pushing only up or down kept landing on the next thing.
+- **A tag pinned below a region sits 18 px under it**, not overlapping it, so the circle on the same region never strikes through it.
+- **Machine checks do not see faces covered, circles off target or a tag that names the wrong thing.** We run a separate review agent that
+  only inspects and files a list with screenshots; fixes are done by someone else. Keep reviewer and fixer apart.
+- **Gap filler marks whole words only** (`tools/fill_marks.py`): half-words and particles underlined in the subtitle looked like mistakes.
+
 ## 2026-10-09 — every line gets a reaction (from our own production)
 
 - **Micro-motion does not fix a static explainer; choreography does.**
