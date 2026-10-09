@@ -11,7 +11,7 @@ import base64, hashlib, json, os, sys, time, urllib.error, urllib.parse, urllib.
 from pathlib import Path
 
 API = 'https://api.elevenlabs.io'
-MODEL = os.environ.get('ELEVENLABS_MODEL', 'eleven_v3')
+MODEL = os.environ.get('ELEVENLABS_MODEL', 'eleven_v4')
 
 
 def key():

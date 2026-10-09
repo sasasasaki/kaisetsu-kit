@@ -81,7 +81,7 @@ Clips: `clips.py` -> `frames.py`. New brush kanji: `build_strokes.py 字字字`.
 
 | variable | used by |
 |---|---|
-| `ELEVENLABS_API_KEY`, `ELEVENLABS_MODEL` (default `eleven_v3`) | `tools/tts.py` |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_MODEL` (default `eleven_v4`) | `tools/tts.py` |
 | `VIDEO_API_KEY`, `VIDEO_BASE_URL`, `VIDEO_MODEL` (default `seedance-2.0`) | `tools/clips.py` |
 | `FACE_MODEL` | `tools/faces.py` |
 
