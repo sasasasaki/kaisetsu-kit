@@ -2,6 +2,7 @@
 # Replace with real scene / summary illustrations in a real project; keep the same names.
 #   assets/kv/open.png, road.png, mountain.png   full-bleed scenes
 #   assets/sum/summary.png                        summary illustration (framed above the subtitles)
+#   assets/regions.json                           named boxes that beats point the camera, circles and tags at
 #   assets/faces.json                             one demo "face" box on the road sun, so card placement has something to avoid
 # usage: python projects/example/make_assets.py
 import json
@@ -90,5 +91,7 @@ def summary():
 
 for rel, im in [('kv/open.png', scene_open()), ('kv/road.png', scene_road()), ('kv/mountain.png', scene_mountain()), ('sum/summary.png', summary())]:
     p = A / rel; p.parent.mkdir(parents=True, exist_ok=True); im.save(p, optimize=True)
+(A / 'regions.json').write_text(json.dumps({'kv/road': {'w': W, 'h': H, 'r': {'path': [0.2, 0.53, 0.78, 1.0], 'sun': [0.74, 0.12, 0.83, 0.29]}},   # named boxes for beats
+                                          'kv/mountain': {'w': W, 'h': H, 'r': {'summit': [0.44, 0.15, 0.56, 0.29], 'slope': [0.13, 0.15, 0.87, 1.0]}}}, indent=1), encoding='utf-8')
 (A / 'faces.json').write_text(json.dumps({'kv/road': {'w': W, 'h': H, 'f': [[0.74, 0.12, 0.83, 0.29]]}}, indent=1), encoding='utf-8')
 print('example assets written to', A)

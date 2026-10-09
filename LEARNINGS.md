@@ -2,6 +2,26 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-09 — every line gets a reaction (from our own production)
+
+- **Micro-motion does not fix a static explainer; choreography does.**
+  Why: viewers felt the picture stand still while the narrator explained. A 1% drift only hides the freeze detector; it does not show what is being said.
+  How: `engine/beats.js` — each line carries beats that fire on a substring of the line: push the camera to the named box being talked about,
+  write the key word with the brush, circle or strike with the brush, pin a tag, slide in an inset, write into a small ledger, flip a formula
+  from = to ≠. A section of 2 minutes went from 3.5 to 37 reactions per minute and from 39% to 100% of lines with a reaction.
+- **Fire on the spoken word, not on the line start.**
+  Why: a tag that appears a second before or after the word reads as a mistake.
+  How: `tools/align.py` (faster-whisper word timestamps mapped back to the script per character) or engine timestamps; `board.py` checks every
+  trigger is still a substring of its line, so a rewrite fails loudly instead of drifting.
+- **Measure it before rendering.**
+  How: `tools/beat_gaps.py` — every line ≥1 event, lines ≥5 s ≥2, no gap over 3.5 s while speaking; smoke runs it.
+- **A cut clears what was stacked on the previous shot.**
+  Why: overlays fading into the next image looked like leftovers.
+  How: `beats.js` ends every layer at the next shot change; only a section carrier (`slot`) survives.
+- **A carrier appears when its first entry is written.** An empty ledger hanging on screen for half a minute was the first thing the reviewer disliked.
+- **Write the English with the word.** Every written word, tag, ledger entry, inset caption and board label carries an `en` line, so an English cut needs no new images.
+- **Brush marks should look like brush marks.** Circles and strikes use the same stroke model as the title calligraphy (pressure at the start, dry-brush streaks at the end) in cinnabar; the reviewer singled this out as the best part.
+
 ## 2026-10-09 — from studying cclank/lanshu-create-ai-presenter-video and ChenShuo2004/cs-skills
 
 - **Stage is computed from artifacts, not declared.**

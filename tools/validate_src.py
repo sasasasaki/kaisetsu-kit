@@ -34,7 +34,7 @@ for sec in src['secs']:
 notes = rj(ROOT / 'notes.json', {})
 for kind, rows in notes.items():
     for r in rows if isinstance(rows, list) else []:
-        if not isinstance(r, (dict, list)) or kind in ('chapters', 'holds'):
+        if not isinstance(r, (dict, list)) or kind in ('chapters', 'holds', 'beats'):   # beats are checked against their own line in board.py
             continue
         sec, key = (r.get('sec'), r.get('keyword')) if isinstance(r, dict) else (r[0], r[1])
         if isinstance(key, int):

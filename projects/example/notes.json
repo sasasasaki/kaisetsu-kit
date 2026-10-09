@@ -15,5 +15,22 @@
  ],
  "sums": [{"sec": "close", "keyword": "まとめると", "key": "summary"}],
  "cards": [["main", "生き方", "道", "みち／どう", "歩く道、そして生き方そのもの。", "the Way / Tao", "dào (zh) · michi, dō (ja)"]],
- "tris": [["main", "老子", "道可道，非常道。", "道の道とすべきは、常の道にあらず。", "The way that can be told is not the eternal Way.", "band", "『老子』第一章"]]
+ "tris": [["main", "老子", "道可道，非常道。", "道の道とすべきは、常の道にあらず。", "The way that can be told is not the eternal Way.", "band", "『老子』第一章"]],
+ "beats": [
+  {"sec": "main", "k": 0, "at": "歩く道", "do": "cam", "img": "kv/road", "box": "path", "fill": 0.7, "dur": 1.0},
+  {"sec": "main", "k": 0, "at": "生き方", "do": "write", "text": "生き方", "en": "a way of living", "pos": [0.64, 0.3], "size": 96, "hold": 0.8},
+  {"sec": "main", "k": 1, "at": "常の道", "do": "cam", "img": "kv/road", "box": "sun", "fill": 0.5, "dur": 0.9},
+  {"sec": "main", "k": 1, "at": "常の道", "do": "circle", "img": "kv/road", "box": "sun", "hold": 0.4},
+  {"sec": "main", "k": 1, "at": "常の道", "do": "tag", "text": "常の道", "en": "the constant Way", "img": "kv/road", "box": "sun", "side": "bottom", "hold": 0.4},
+  {"sec": "main", "k": 2, "at": "茶道", "do": "fill", "slot": 0, "text": "茶道", "en": "tea"},
+  {"sec": "main", "k": 2, "at": "書道", "do": "fill", "slot": 1, "text": "書道", "en": "calligraphy"},
+  {"sec": "main", "k": 2, "at": "武道", "do": "fill", "slot": 2, "text": "武道", "en": "martial arts"},
+  {"sec": "main", "k": 2, "at": "茶道", "do": "slot", "id": "ways", "title": "〜道", "en": "The ways", "n": 3, "hold": "sec"},
+  {"sec": "main", "k": 3, "at": "長い道のり", "do": "cam", "img": "kv/mountain", "box": "slope", "fill": 0.95, "dur": 1.0},
+  {"sec": "main", "k": 3, "at": "そのまま", "do": "cam", "img": "kv/mountain", "box": "summit", "fill": 0.45, "dur": 1.1},
+  {"sec": "main", "k": 3, "at": "「道」", "do": "circle", "img": "kv/mountain", "box": "summit", "hold": 0.6},
+  {"sec": "close", "k": 0, "at": "場所", "do": "tag", "text": "場所ではなく", "en": "not a place", "pos": [0.35, 0.55], "color": "red", "hold": 0.4},
+  {"sec": "close", "k": 0, "at": "歩き方", "do": "write", "text": "歩き方", "en": "a way of walking", "pos": [0.62, 0.45], "size": 110, "hold": 1.0},
+  {"sec": "close", "k": 1, "at": "少しだけ", "do": "tag", "text": "少しだけ", "en": "just a little", "pos": [0.5, 0.62], "hold": 0.8}
+ ]
 }

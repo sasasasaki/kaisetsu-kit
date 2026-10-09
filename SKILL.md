@@ -24,6 +24,10 @@ ffmpeg encodes. The timeline (`src/timeline.json`) is generated, never hand-edit
    When generating images with text, ask for exact glyphs in the prompt and zoom-inspect every label (models invent characters).
 5. `notes.json` (scenes, diagrams, sums, cards, tris placed by keyword) -> `tools/board.py` -> `src/board.json`.
 6. `tools/plan.py` (timeline) -> `tools/sound.py` (audio).
+6b. Beats: every line needs a reaction tied to what is said. Add `beats` to `notes.json` (camera push to a named box, brush-written word,
+   cinnabar circle/strike, tag, inset, ledger slot, formula, two-column board), each firing on a substring of its line; name boxes in
+   `assets/regions.json`. `tools/align.py <p>` gives per-character timing (faster-whisper) when the TTS did not.
+   `tools/beat_gaps.py <p>` must PASS (every line ≥1 event, lines ≥5 s ≥2, no gap over 3.5 s). Every word/tag you write gets an `en` line.
 7. `tools/qc_cards.py <p>` and `tools/qc_cards.py <p> --subs` must both report 0.
 8. `tools/render.py <p> stills auto` and look at them; then `tools/render.py <p> video 3`.
 9. `tools/verify.py <p> --draft` must PASS (decode, -16 LUFS, true peak, freeze/black, SRT, 720p draft).

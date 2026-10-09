@@ -52,6 +52,8 @@ The engine is served from the repo root (`/engine/index.html?p=<project>`), so p
 | board | `board.py` | `script.src.json`, `notes.json` | `src/board.json` |
 | timeline | `plan.py` | board, script, voice | `src/timeline.json` |
 | sound | `sound.py` | timeline, board | `renders/audio.wav` |
+| char timing | `align.py` (optional, faster-whisper) | `assets/voice/lines/*.mp3` | `assets/voice/align.json` |
+| reaction gate | `beat_gaps.py` | board, timeline, align | `qc/beats.json` |
 | overlap QC | `qc_cards.py [--subs]` | rendered frames | `qc/cards.json` |
 | render | `render.py stills|sheet|video|mux` | page + timeline | `qc/still-*.jpg`, `renders/final.mp4` |
 | verify | `verify.py [--draft]` | `final.mp4` | `renders/verify.json`, `final.srt`, `draft-720p.mp4` |
@@ -68,7 +70,10 @@ Clips: `clips.py` -> `frames.py`. New brush kanji: `build_strokes.py 字字字`.
 **notes.json** — what appears on screen, placed by a keyword in the narration (see `projects/example/notes.json`):
 `scenes` (full-bleed images), `diagrams` (`table`, `list`, `loop`, `ladder`, `trio`, `gates`, `flow`, `compare`, `axis`, `tri`, `quote` with a `spec`),
 `sums` (summary illustrations), `cards` (`[sec, keyword, term, reading, description, western equivalent, english]`),
-`memos` (works cited as examples), `tris` (`[sec, keyword, zh, ja, en, "band"|"top", source]`), `holds` (designed still ranges exempt from freeze detection).
+`memos` (works cited as examples), `tris` (`[sec, keyword, zh, ja, en, "band"|"top", source]`), `holds` (designed still ranges exempt from freeze detection),
+`beats` (per-line reactions: `{sec, k, at, do, ...}` with `do` = `cam|write|strike|circle|tag|inset|slot|fill|paper|formula|board2|clear|rest`; see the header of `engine/beats.js`).
+
+**regions.json** (for beats) — `assets/regions.json`: `{"kv/road": {"w": 1920, "h": 1080, "r": {"path": [x0, y0, x1, y1]}}}` in 0–1 image coordinates.
 
 **cast.json** (optional) — `assets/cast/cast.json`: `{"cast": [{"id", "name", "accent", "face"?, "image"?, "pan"?, "reverb"?}]}`.
 `face` / `image` are paths under `assets/cast/`. Without faces, speakers get plain name chips; without cast.json, the speaker id is shown.

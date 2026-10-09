@@ -96,8 +96,16 @@ def build(root):
             for i, c in enumerate(grp):
                 c['f'] = round(i / len(grp), 2)
     tris = [{'sec': r[0], 'k': B.K(r[0], r[1]), 'zh': r[2], 'ja': r[3], 'en': r[4], 'mode': r[5], **({'src': r[6]} if len(r) > 6 else {})} for r in N.get('tris', [])]
+    beats = N.get('beats', [])
+    for b in beats:   # a beat fires on a substring of its line; a rewrite that drops the phrase fails here instead of silently drifting
+        line = B.lines[b['sec']][b['k']]
+        for f in ('at', 'fixAt', 'rightAt', 'stoneAt'):
+            if b.get(f):
+                if b[f] not in line:
+                    raise SystemExit(f'beat "{b[f]}" is not in {b["sec"]}#{b["k"]}: {line}')
+                b['frac' if f == 'at' else f + 'Frac'] = round(line.index(b[f]) / max(1, len(line)), 3)
     board = {'film': N['film'], 'mark': N.get('mark', ''), **({'brand': N['brand']} if N.get('brand') else {}), 'secs': secs, 'cards': cards + memos, 'tris': tris,
-             'chapters': N.get('chapters', [{'name': N['film'], 'from': secs[0]['id']}]), 'holds': N.get('holds', [])}
+             'beats': beats, 'chapters': N.get('chapters', [{'name': N['film'], 'from': secs[0]['id']}]), 'holds': N.get('holds', [])}
     wj(root / 'src/board.json', board)
     print(len(secs), 'secs', sum(len(s['shots']) for s in secs), 'shots', len(cards), 'cards', len(memos), 'memos', len(tris), 'tris')
 
