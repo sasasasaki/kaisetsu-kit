@@ -1,0 +1,19 @@
+{
+ "_format": "[speaker, delivery tag, Japanese (subtitle + TTS), Chinese, English]; optional 6th field = fixed line id",
+ "secs": [
+  {"id": "open", "lines": [
+   ["guide", "calm", "今日は、一文字の漢字「道」の話をします。", "今天讲一个汉字「道」。", "Today, one kanji: 道, the Way."],
+   ["student", "curious", "道って、ただの道路じゃないんですか？", "道，不就是路吗？", "Isn't 道 just a road?"]
+  ]},
+  {"id": "main", "lines": [
+   ["guide", "warm", "道は、歩く道であり、生き方の道でもあります。", "道既是走的路，也是活法。", "It is the road you walk, and also a way of living."],
+   ["guide", "calm", "老子は「道の道とすべきは、常の道にあらず」と言いました。", "老子说：「道可道，非常道。」", "Laozi said: the way that can be told is not the eternal Way."],
+   ["student", "bright", "茶道、書道、武道。全部「道」ですね。", "茶道、书道、武道，都是「道」。", "Tea, calligraphy, martial arts. All of them are 道."],
+   ["guide", "warm", "技を磨く長い道のりが、そのまま「道」なんです。", "磨练技艺的漫长路途，本身就是「道」。", "The long road of practice is itself the Way."]
+  ]},
+  {"id": "close", "lines": [
+   ["guide", "calm", "まとめると、道は場所ではなく、歩き方です。", "总结：道不是地方，而是走法。", "In short, the Way is not a place but a way of walking."],
+   ["student", "bright", "じゃあ、今日も少しだけ歩いてみます。", "那今天我也走一小段。", "Then I'll walk a little today, too."]
+  ]}
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "title": "となりの丘",
+ "chapter": "第一話",
+ "subtitle": "Chapter 1 · The Hill Next Door",
+ "names": {"A": ["AOI", "#9fb4d8"], "B": ["REN", "#e3a07a"]},
+ "pages": [
+  {"id": "P1", "image": "assets/pages/p1.png", "size": [1200, 1700], "panels": [
+   {"id": "P1-1", "box": [40, 40, 1160, 820], "read_order": 1, "lettering": []},
+   {"id": "P1-2", "box": [40, 860, 1160, 1660], "read_order": 2, "lettering": [{"kind": "sfx", "rect": [700, 500, 300, 160]}]}
+  ]},
+  {"id": "P2", "image": "assets/pages/p2.png", "size": [1200, 1700], "trans": "turn", "panels": [
+   {"id": "P2-1", "box": [40, 40, 590, 1000], "read_order": 1, "lettering": []},
+   {"id": "P2-2", "box": [630, 40, 1160, 1000], "read_order": 2, "lettering": []},
+   {"id": "P2-3", "box": [40, 1040, 1160, 1660], "read_order": 3, "lettering": []}
+  ]}
+ ],
+ "lines": [
+  {"id": "c001", "panel": "P1-1", "role": "A", "plain": "あの丘、行ったことある？", "en": "Have you ever been up that hill?"},
+  {"id": "c002", "panel": "P1-2", "role": "B", "plain": "ないよ。誰か来たみたい。", "en": "Never. Someone's at the door."},
+  {"id": "c003", "panel": "P2-2", "role": "A", "plain": "じゃあ、明日行こう！", "en": "Then let's go tomorrow!", "shake": true}
+ ],
+ "captions": [{"panel": "P2-3", "role": "narration", "plain": "翌朝。", "en": "The next morning."}],
+ "knocks": ["P1-2"]
+}

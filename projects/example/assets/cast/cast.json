@@ -1,0 +1,4 @@
+{"cast": [
+ {"id": "guide", "name": "ガイド", "accent": "#3d6b67", "pan": -0.08},
+ {"id": "student", "name": "生徒", "accent": "#9b2d24", "pan": 0.1}
+]}

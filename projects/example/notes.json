@@ -1,0 +1,19 @@
+{
+ "film": "道 — The Way in one kanji",
+ "mark": "KAISETSU-KIT EXAMPLE",
+ "labels": {"open": "OPEN", "main": "道", "close": "まとめ"},
+ "open": {"kanji": "道", "gloss": "みち · どう · dào", "img": "open", "title": "道", "sub": "一文字で読む", "small": "kaisetsu-kit example"},
+ "chapters": [{"name": "道", "from": "open"}],
+ "scenes": [
+  {"sec": "main", "keyword": "生き方", "key": "road", "tag": "歩く道"},
+  {"sec": "main", "keyword": "長い道のり", "key": "mountain", "tag": "修行の道"}
+ ],
+ "diagrams": [
+  {"sec": "main", "keyword": "茶道", "type": "table", "spec": {"tag": "三つの「道」", "title": "「〜道」と呼ばれるもの",
+   "cols": ["名前", "読み", "磨くもの"], "w": [0.3, 0.3, 0.4],
+   "rows": [["茶道", "さどう", "もてなしの所作"], ["書道", "しょどう", "筆と線"], ["武道", "ぶどう", "心と体"]]}}
+ ],
+ "sums": [{"sec": "close", "keyword": "まとめると", "key": "summary"}],
+ "cards": [["main", "生き方", "道", "みち／どう", "歩く道、そして生き方そのもの。", "the Way / Tao", "dào (zh) · michi, dō (ja)"]],
+ "tris": [["main", "老子", "道可道，非常道。", "道の道とすべきは、常の道にあらず。", "The way that can be told is not the eternal Way.", "band", "『老子』第一章"]]
+}

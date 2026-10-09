@@ -1,0 +1,114 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explainer</title>
+<style>
+:root{
+  --bg:#f3eee3; --panel:#fbf8f1; --ink:#1c1a17; --sub:#6e675e; --line:rgba(28,26,23,.16); --red:#9b2d24; --hl:rgba(155,45,36,.08);
+  --serif:"Yu Mincho","YuMincho","Hiragino Mincho ProN","Noto Serif JP",serif; --sans:"Yu Gothic","YuGothic","Hiragino Sans","Noto Sans JP",sans-serif; --mono:Consolas,"SFMono-Regular",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171513;--panel:#211e1b;--ink:#ece6da;--sub:#a59d91;--line:rgba(236,230,218,.16);--red:#d0614f;--hl:rgba(208,97,79,.12);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171513;--panel:#211e1b;--ink:#ece6da;--sub:#a59d91;--line:rgba(236,230,218,.16);--red:#d0614f;--hl:rgba(208,97,79,.12);color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 64px}
+.tag{font:12px/1.4 var(--mono);letter-spacing:.14em;color:var(--sub);display:flex;gap:10px;align-items:center}
+.tag::before{content:"";width:9px;height:9px;background:var(--red)}
+h1{font:600 clamp(30px,5vw,52px)/1.2 var(--serif);margin:10px 0 4px;letter-spacing:.06em;text-wrap:balance}
+.lead{color:var(--sub);margin:0 0 16px}
+.player{background:#000;aspect-ratio:16/9;width:100%}
+video{width:100%;height:100%;display:block}
+.chaps{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.chaps button{font:14px var(--sans);background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.chaps button.on{border-color:var(--red);color:var(--red)}
+.now{font:13px var(--mono);color:var(--sub);min-height:1.7em}
+h2{font:600 24px/1.3 var(--serif);margin:40px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.secs button{text-align:left;background:none;border:0;border-left:3px solid var(--line);padding:4px 10px;color:var(--ink);font:14px var(--sans);cursor:pointer}
+.secs button span{font:12px var(--mono);color:var(--sub);margin-right:8px}
+.secs button.on{border-left-color:var(--red);background:var(--hl)}
+.cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.cast figure{margin:0;background:var(--panel);border:1px solid var(--line)}
+.cast img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.cast figcaption{padding:8px 10px;font-size:13px}
+.cast b{font:600 16px var(--serif);display:block}
+.lines{border-top:1px solid var(--line)}
+.ln{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.ln:hover,.ln.on{background:var(--hl)}
+.ln .t{font:12px var(--mono);color:var(--sub);padding-top:4px}
+.ln .jp{font:16px/1.7 var(--serif)}
+.ln .zh,.ln .en{font-size:13px;color:var(--sub)}
+.ln .who{font-size:12px;font-weight:700}
+.ill{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.ill figure{margin:0}
+.ill img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border:1px solid var(--line)}
+.ill details{font-size:12px;color:var(--sub)}
+.ill pre{white-space:pre-wrap;font:11px/1.5 var(--mono);max-height:220px;overflow:auto;background:var(--panel);padding:8px;border:1px solid var(--line)}
+</style>
+<div class="wrap">
+  <div class="tag" id="mark"></div>
+  <h1 id="ttl"></h1>
+  <p class="lead" id="lead"></p>
+  <div class="player"><video id="v" controls playsinline preload="metadata"></video></div>
+  <div class="chaps" id="chaps"></div>
+  <div class="now" id="now"></div>
+  <h2>Sections</h2>
+  <div class="secs" id="secs"></div>
+  <h2 id="castH">Cast</h2>
+  <div class="cast" id="cast"></div>
+  <h2>Script</h2>
+  <div class="lines" id="lines"></div>
+  <h2 id="illH">Illustrations</h2>
+  <div class="ill" id="ill"></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+let D, cur = 0, pending = null;
+const v = $("#v");
+function load(i, at = 0, play = false) {
+  cur = i; const c = D.chapters[i];
+  if (!v.src.endsWith(c.file)) { v.src = c.file; pending = at; } else v.currentTime = at;
+  document.querySelectorAll(".chaps button").forEach((b, k) => b.classList.toggle("on", k === i));
+  if (play) v.play().catch(() => {});
+}
+v.addEventListener("loadedmetadata", () => { if (pending) v.currentTime = pending; pending = null; });
+v.addEventListener("ended", () => { if (cur + 1 < D.chapters.length) load(cur + 1, 0, true); });
+function seek(t) { let i = D.chapters.findIndex(c => t >= c.t0 && t < c.t1); if (i < 0) i = D.chapters.length - 1; load(i, Math.max(0, t - D.chapters[i].t0), true); window.scrollTo({ top: $(".player").offsetTop - 20, behavior: "smooth" }); }
+v.addEventListener("timeupdate", () => {
+  const t = D.chapters[cur].t0 + v.currentTime;
+  let si = 0; D.secs.forEach((s, k) => { if (t >= s.t) si = k; });
+  document.querySelectorAll(".secs button").forEach((b, k) => b.classList.toggle("on", k === si));
+  let li = -1; D.lines.forEach((l, k) => { if (t >= l.t - 0.2) li = k; });
+  document.querySelectorAll(".ln").forEach((e, k) => e.classList.toggle("on", k === li));
+  $("#now").textContent = `${fmt(t)} / ${fmt(D.dur)} | ${D.secs[si].name}`;
+});
+fetch("data.json").then(r => r.json()).then(d => {
+  D = d;
+  $("#mark").textContent = d.mark; $("#ttl").textContent = d.film; document.title = d.film;
+  $("#lead").textContent = `${fmt(d.dur)} · ${d.chapters.length} chapters · ${d.lines.length} lines`;
+  v.poster = "poster.jpg";
+  d.chapters.forEach((c, i) => { const b = document.createElement("button"); b.textContent = `${i + 1}  ${c.name}`; b.onclick = () => load(i, 0, true); $("#chaps").append(b); });
+  d.secs.forEach(s => { const b = document.createElement("button"); b.innerHTML = `<span>${fmt(s.t)}</span>`; b.append(s.name); b.onclick = () => seek(s.t + 0.1); $("#secs").append(b); });
+  const byId = Object.fromEntries(d.cast.map(c => [c.id, c]));
+  $("#castH").hidden = !d.cast.some(c => c.image);
+  d.cast.filter(c => c.image).forEach(c => {
+    const f = document.createElement("figure");
+    f.innerHTML = `<img loading="lazy" src="cast-${c.id}.jpg" alt=""><figcaption><b></b><span></span></figcaption>`;
+    f.querySelector("b").textContent = c.name; f.querySelector("b").style.color = c.accent; f.querySelector("span").textContent = `${c.lines} lines`;
+    $("#cast").append(f);
+  });
+  d.lines.forEach(l => {
+    const e = document.createElement("div"); e.className = "ln";
+    e.innerHTML = `<div class="t"></div><div><div class="who"></div><div class="jp"></div><div class="zh"></div><div class="en"></div></div>`;
+    e.querySelector(".t").textContent = fmt(l.t); e.querySelector(".who").textContent = byId[l.who]?.name || l.who; e.querySelector(".who").style.color = byId[l.who]?.accent || "";
+    e.querySelector(".jp").textContent = l.jp; e.querySelector(".zh").textContent = l.zh; e.querySelector(".en").textContent = l.en; e.onclick = () => seek(l.t - 0.3);
+    $("#lines").append(e);
+  });
+  $("#illH").hidden = !d.illus.length;
+  d.illus.forEach(il => {
+    const f = document.createElement("figure");
+    f.innerHTML = `<img loading="lazy" src="illus-${il.id}.jpg" alt=""><details><summary></summary><pre></pre></details>`;
+    f.querySelector("summary").textContent = il.id + " prompt"; f.querySelector("pre").textContent = il.brief; $("#ill").append(f);
+  });
+  load(0);
+});
+</script>

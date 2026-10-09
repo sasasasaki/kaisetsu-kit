@@ -1,0 +1,14 @@
+__pycache__/
+.cache/
+.render.lock
+projects/*/renders/
+projects/*/qc/
+projects/*/web/
+projects/*/src/
+projects/*/assets/kv/
+projects/*/assets/sum/
+projects/*/assets/pages/
+projects/*/assets/faces.json
+projects/*/assets/voice/lines/
+projects/*/assets/voice/script.json
+projects/*/assets/video/
