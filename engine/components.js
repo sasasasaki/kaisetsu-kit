@@ -324,7 +324,7 @@ DRAW.kanji = (g, sh, t) => {
   if (mt < 1) glyph(sh.ch, cx, lerp(cy, cy - 80, mt), lerp(size, size * 2.4, mt), (tl - 0.3) / 1.8, INK, 1 - mt, 7, g);
   if (sh.gloss) txt(g, sh.gloss, cx, cy + 340, 30, { align: "center", fam: MIND, color: RED, alpha: eOut((tl - 2.4) / 0.6) * (1 - mt), ls: 6 });
 };
-// causal loop: nodes on an ellipse, arcs chase each other, "R" (reinforcing) in the middle
+// causal loop: nodes on an ellipse, arcs chase each other, a cycle mark (or sh.center) in the middle
 DRAW.loop = (g, sh, t) => {
   const tl = t - sh.t0; head(g, sh, tl);
   const n = sh.nodes.length, cx = W / 2 - 60, cy = 600, rx = 470, ry = 250;
@@ -344,7 +344,7 @@ DRAW.loop = (g, sh, t) => {
     txt(g, nd, x, y + 10, 38, { align: "center", fam: MIND, alpha: a });
   });
   const r = shown(sh, n - 1, t);
-  txt(g, "R", cx, cy + 34, 110, { align: "center", fam: LAT, color: RED, alpha: r, w: "bold" });
+  txt(g, sh.center || "↻", cx, cy + 34, 110, { align: "center", fam: sh.center ? MIND : GO, color: RED, alpha: r });   // a bare "R" read as a registered-trademark sign
   if (sh.mid) txt(g, sh.mid, cx, cy + 86, 26, { align: "center", fam: GO, color: GREY, alpha: r, ls: 4 });
 };
 

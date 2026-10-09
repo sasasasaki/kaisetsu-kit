@@ -45,7 +45,7 @@ def diagram(d, k):   # notes.diagrams[].spec -> shot fields
         sh['items'] = [it if isinstance(it, dict) else dict(zip(('t', 'd'), (it.split('：', 1) + [''])[:2]), n=NUMS[i]) for i, it in enumerate(sp['items'])]
         sh.update({k: sp[k] for k in ('note',) if k in sp})
     elif t == 'loop':
-        sh.update(nodes=[n[0] if isinstance(n, list) else n for n in sp['nodes']], mid=sp.get('mid', ''))
+        sh.update(nodes=[n[0] if isinstance(n, list) else n for n in sp['nodes']], mid=sp.get('mid', ''), **({'center': sp['center']} if sp.get('center') else {}))
     elif t == 'ladder':
         sh.update(steps=[s if isinstance(s, dict) else {'t': s[0], 'w': s[1] if len(s) > 1 else ''} if isinstance(s, list) else {'t': s} for s in sp['steps']],
                   **({'climber': sp['climber']} if 'climber' in sp else {}))
