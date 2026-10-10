@@ -82,7 +82,12 @@ function xbRect(img, name, t) {
   const w = R.w, h = R.h, [z, fx, fy] = kenOf(sh, t), s = Math.max(W / w, H / h) * z, dw = w * s, dh = h * s, ox = (W - dw) * fx, oy = (H - dh) * fy;
   return [ox + box[0] * dw, oy + box[1] * dh, ox + box[2] * dw, oy + box[3] * dh];
 }
-function xbWhere(b, t) {
+function xbWhere(b, t) {   // the screen point is fixed at first draw: following the box let a later push carry a fading tag off screen
+  if (b.whAt) return b.whAt;
+  const w = xbWhere0(b, t); if (w && t >= b.t) b.whAt = w;
+  return w;
+}
+function xbWhere0(b, t) {
   if (b.pos) return [b.pos[0] * W, b.pos[1] * H];
   const r = xbRect(b.img, b.box, t); if (!r) return null;
   const sd = b.side || "top";
@@ -101,10 +106,23 @@ function xbSubTop(g, t0, t1) {
   }
   return top;
 }
-function xbFit(g, b, x0, y0, x1, y1) {
+function xbLifeObs(b) {   // cards, tri bands, circles and strikes that show during this reaction's life: avoided on first placement
+  const o = [], t0 = b.t - 0.1, t1 = b.t1 + 0.4;
+  o.push(...cardsForBeats(t0, t1));
+  if (typeof TRIS !== "undefined") for (const c of TRIS) if (c.t0 - 0.2 < t1 && c.t1 + 0.4 > t0) o.push(c.mode === "band" ? [0, 760, W, H] : [40, 86, 1240, 356]);
+  for (const c of XB.list) {
+    if (c === b || (c.do !== "circle" && c.do !== "strike") || c.t > t1 || c.t1 < t0) continue;
+    const q = c.rect ? c.rect.map((v, i) => v * (i % 2 ? H : W)) : c.img && c.box ? xbRect(c.img, c.box, c.t + 0.3) : null;
+    if (q) o.push([q[0] - 22, q[1] - 18, q[2] + 22, q[3] + 18]);
+  }
+  return o;
+}
+function xbFit(g, b, x0, y0, x1, y1) {   // placed once on first draw, then kept: re-fitting every frame made labels jump when other layers came and went
   const L = 24, T = 64, R = W - 24, B = (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14;
   const bx = x0 < L ? L - x0 : x1 > R ? R - x1 : 0, by = y1 > B ? Math.max(T - y0, B - y1) : y0 < T ? T - y0 : 0;
-  const free = (dx, dy) => x0 + dx >= L - 0.5 && x1 + dx <= R + 0.5 && y0 + dy >= T - 0.5 && y1 + dy <= B + 0.5 && !XB.placed.some(p => x0 + dx < p[2] + 6 && x1 + dx > p[0] - 6 && y0 + dy < p[3] + 6 && y1 + dy > p[1] - 6);
+  if (b.fitAt) { XB.placed.push([x0 + b.fitAt[0], y0 + b.fitAt[1], x1 + b.fitAt[0], y1 + b.fitAt[1]]); return b.fitAt; }
+  const obs = [...XB.placed, ...xbLifeObs(b)];
+  const free = (dx, dy) => x0 + dx >= L - 0.5 && x1 + dx <= R + 0.5 && y0 + dy >= T - 0.5 && y1 + dy <= B + 0.5 && !obs.some(p => x0 + dx < p[2] + 6 && x1 + dx > p[0] - 6 && y0 + dy < p[3] + 6 && y1 + dy > p[1] - 6);
   let best = [bx, by];
   if (!free(bx, by)) {
     const C = [];
@@ -113,6 +131,7 @@ function xbFit(g, b, x0, y0, x1, y1) {
     best = C.find(c => free(c[0], c[1])) || best;
   }
   XB.placed.push([x0 + best[0], y0 + best[1], x1 + best[0], y1 + best[1]]);
+  b.fitAt = best;
   return best;
 }
 function xbPaperPatch(g, x, y, w, h, a) { g.save(); g.globalAlpha = a * 0.86; g.shadowColor = "rgba(40,30,20,0.25)"; g.shadowBlur = 24; g.fillStyle = PAPER; g.fillRect(x, y, w, h); g.restore(); }
@@ -171,7 +190,8 @@ function xbTag(g, b, t) {
   if (b.en) { font(g, efs, LAT); w = Math.max(w, g.measureText(b.en).width + 44); }
   const eh = b.en ? efs + 10 : 0, h = fs + 26 + eh, col = b.color === "red" ? RED : TEA;
   if (b.side === "bottom" && b.img) wh = [wh[0], wh[1] - 52 + 18 + h];
-  if (b.side === "bottom" && wh[1] > (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14) wh = xbWhere({ ...b, side: "top" }, t) || wh;
+  if (b.flipTop === undefined) b.flipTop = b.side === "bottom" && wh[1] > (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14;   // decided once
+  if (b.flipTop) wh = xbWhere0({ ...b, side: "top" }, t) || wh;
   const [fx, fy] = xbFit(g, b, wh[0] - w / 2, wh[1] - h, wh[0] + w / 2, wh[1]), x = wh[0] + fx, y = wh[1] + fy;
   const yy = y - h * (1 - eOut((t - b.t) / 0.35)) * 0.3;
   g.save(); g.globalAlpha = a * 0.93; g.fillStyle = PAPER; g.shadowColor = "rgba(30,20,10,0.3)"; g.shadowBlur = 16; g.fillRect(x - w / 2, yy - h, w, h); g.shadowBlur = 0;
@@ -189,7 +209,8 @@ function xbInset(g, b, t) {
   const [fx, fy] = xbFit(g, b, b.pos[0] * W - w / 2 - 12, b.pos[1] * H - h / 2 - 12, b.pos[0] * W + w / 2 + 12, b.pos[1] * H + h / 2 + 12 + (b.caption ? 60 : 0) + (b.en ? 34 : 0)), cx = b.pos[0] * W + fx, cy = b.pos[1] * H + fy;
   g.save(); g.globalAlpha = a; g.shadowColor = "rgba(30,20,10,0.35)"; g.shadowBlur = 26; g.fillStyle = PAPER; g.fillRect(cx - w / 2 - 12, cy - h / 2 - 12 + dy, w + 24, h + 24); g.shadowBlur = 0;
   g.drawImage(im, sx, sy, sw, sh2, cx - w / 2, cy - h / 2 + dy, w, h); g.restore();
-  if (b.caption) txt(g, b.caption, cx, cy + h / 2 + 52 + dy, 30, { align: "center", fam: MIND, alpha: a });
+  if (b.caption) { font(g, 30, MIND); const cw = Math.max(g.measureText(b.caption).width, b.en ? (font(g, 22, LAT), g.measureText(b.en).width) : 0) + 36;   // paper backing: unreadable on dark images
+    xbPaperPatch(g, cx - cw / 2, cy + h / 2 + 18 + dy, cw, b.en ? 84 : 50, a); txt(g, b.caption, cx, cy + h / 2 + 52 + dy, 30, { align: "center", fam: MIND, alpha: a }); }
   xbEn(g, b.en, cx, cy + h / 2 + 86 + dy, 22, a);
 }
 function xbSlot(g, b, t) {
@@ -242,7 +263,7 @@ function xbBoard2(g, b, t) {
   });
 }
 const XB_DRAW = { write: xbWrite, strike: xbStrike, circle: xbCircle, tag: xbTag, inset: xbInset, slot: xbSlot, paper: xbPaper, formula: xbFormula, board2: xbBoard2 };
-const XB_ORDER = ["paper", "inset", "formula", "board2", "tag", "write", "circle", "strike", "slot"];
+const XB_ORDER = ["paper", "inset", "formula", "board2", "write", "tag", "circle", "strike", "slot"];   // written words before tags so a tag sees them
 function xbDraw(g, t) {
   xbInit(); XB.placed = [];
   const sh = SHOTS.find(s => s.type === "scene" && !s.sum && t >= s.t0 && t < s.t1), fc = sh && typeof facesOf === "function" && facesOf(sh.img);
@@ -279,3 +300,20 @@ function xbMark(g, b, t) {
 }
 const xbSub0 = subtitle;
 subtitle = function (g, t) { xbSub0(g, t); for (const b of XB.list) if (b.do === "mark" && t >= b.t - 0.05 && t < b.t1 + 0.5) xbMark(g, b, t); };
+
+// called by faceHit (components.js) when a card picks its slot: the share of what is being circled, tagged or pushed into that card r covers at t
+function xbCardAvoid(t, r) {
+  xbInit(); let hit = 0;
+  for (const b of XB.list) {
+    if (!["circle", "cam", "inset", "strike"].includes(b.do) || t < b.t || t > (b.do === "cam" ? b.t + 2.5 : b.t1)) continue;
+    const q = b.rect ? b.rect.map((v, i) => v * (i % 2 ? H : W)) : b.img && b.box && b.box !== "full" ? xbRect(b.img, b.box, t) : null; if (!q) continue;
+    const ix = Math.min(r[2], q[2]) - Math.max(r[0], q[0]), iy = Math.min(r[3], q[3]) - Math.max(r[1], q[1]);
+    if (ix > 0 && iy > 0) hit = Math.max(hit, ix * iy / Math.max(1, (q[2] - q[0]) * (q[3] - q[1])));
+  }
+  return hit;
+}
+// card rects that show between t0 and t1 (card slots are fixed in cardsInit)
+function cardsForBeats(t0, t1) {
+  if (typeof CARDS === "undefined") return [];
+  return CARDS.filter(c => c.t0 - 0.2 < t1 && c.t1 + 0.4 > t0 && (c.compact || c.pos)).map(c => { const k = c.compact ? 0.8 : 1, [x, y] = c.compact ? [W - 600 * k - 34, 58] : c.pos; return [x - 10, y - 10, x + 600 * k + 10, y + 250 * k + 10]; });
+}

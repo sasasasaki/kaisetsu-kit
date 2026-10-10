@@ -2,6 +2,18 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-10 — placed once, then kept
+
+- **A reaction's position is decided on its first frame and never re-fitted.**
+  Why: re-fitting every frame made a tag jump hundreds of pixels when a card or another tag appeared next to it, and a tag that followed
+  its box was carried off screen by the next camera push while it faded out.
+  How: `xbFit` caches the offset (`fitAt`), `xbWhere` caches the screen point (`whAt`). The first placement already avoids everything that
+  will show during the reaction's life: cards, tri bands, circles and strikes (`xbLifeObs`).
+- **Cards avoid what is being pointed at, not only faces.** A card that covers the box being circled or pushed into hides the point of the line.
+  How: `faceHit` samples every half second (three samples missed a face the camera pushed into) and adds `xbCardAvoid`; when every slot
+  covers more than 20%, the card is tucked small in the corner.
+- **Written words are placed before tags** in a frame, so a tag can see them.
+
 ## 2026-10-10 — layout QC, and why it needs its own checker
 
 - **Text off-screen, out of its card, under the subtitle, or on a face is the most visible mistake in a choreographed explainer.**

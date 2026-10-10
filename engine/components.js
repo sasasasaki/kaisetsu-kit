@@ -189,6 +189,7 @@ function cardsInit() {
     const ok = CARD_POS.filter((p, i) => !((i === 1 || i === 4) && tri("top")) && !(p[1] > 300 && tri("band")));
     let best = ok[0], hit = faceHit(c, over, best);
     for (const p of ok.slice(1)) { if (hit === 0) break; const h = faceHit(c, over, p); if (h < hit) { best = p; hit = h; } }
+    if (hit > 0.2) { c.compact = true; return; }   // every slot covers a face: tuck a small card in the corner
     c.pos = best; c.faceHit = hit;
   });
 }
@@ -205,7 +206,7 @@ function faceHit(c, over, [rx0, ry0]) {
   let hit = 0;
   for (const s of over) {
     const fc = s.type === "scene" && !s.sum && facesOf(s.img); if (!fc) continue;
-    for (const t of [c.t0 + 0.5, (c.t0 + c.t1) / 2, c.t1]) {
+    for (let t = c.t0 + 0.3; t <= c.t1; t += 0.5) {   // every half second: three samples missed a face the camera pushed into
       if (t < s.t0 || t >= s.t1) continue;
       const [z, fx, fy] = kenOf(s, t), k = Math.max(W / fc.w, H / fc.h) * z, dw = fc.w * k, dh = fc.h * k, ox = (W - dw) * fx, oy = (H - dh) * fy;
       for (const [u0, v0, u1, v1] of fc.f) {
@@ -214,6 +215,7 @@ function faceHit(c, over, [rx0, ry0]) {
       }
     }
   }
+  if (typeof xbCardAvoid === "function") for (let t = c.t0 + 0.3; t <= c.t1; t += 0.5) hit = Math.max(hit, xbCardAvoid(t, [rx0, ry0, rx1, ry1]));   // nor what is being circled, tagged or pushed into (beats.js)
   return hit;
 }
 function vocabCard(g, c, t) {
