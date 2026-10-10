@@ -112,6 +112,8 @@ async def main():
                     if not shot.exists(): shot.write_bytes(base64.b64decode((await pg.evaluate(GRAB)).split(',', 1)[1]))
                     found.append({'t': round(t, 2), 'kind': kind, 'text': s, 'box': [round(v) for v in bx], 'shot': str(shot.relative_to(ROOT))})
                 t = round(t + STEP, 3)
+            for s in await pg.evaluate('typeof XB === "undefined" ? [] : XB.crowded'):   # reactions with no free spot (beats.js xbPlace)
+                found.append({'t': float(s.rsplit('@', 1)[1]), 'kind': 'crowded', 'text': s, 'box': [0, 0, 0, 0], 'shot': ''})
             await b.close()
     finally:
         srv.terminate()

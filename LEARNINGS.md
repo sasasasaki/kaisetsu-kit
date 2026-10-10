@@ -2,6 +2,17 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-10 — place everything in time order, before drawing
+
+- **"Placed on its first frame" is not deterministic.** The first frame that draws a reaction differs between a chunked render (each worker
+  starts mid-film), the sequential layout check and a single still, so the check passed while the film had labels on top of each other.
+  How: `xbPlace` places every tag, written word and inset once, in time order, each seeing only the ones placed before it. Same layout
+  whatever order frames are drawn in.
+- **Avoid over the reaction's whole life, not the frame it appears in.** A tag placed beside a face in the wide shot ended up on the face
+  after the next push. Faces are sampled every 0.25 s through the push/pull; circles are sampled the same way (a circle grows with a push
+  and struck through a fixed tag). A tag pinned to a box does not avoid that box's own circle, or it drifts next to something else.
+- **No free spot is a reported fallback, not a silent one.** The least-covered spot is used and `qc_layout` lists it as `crowded`.
+
 ## 2026-10-10 — placed once, then kept
 
 - **A reaction's position is decided on its first frame and never re-fitted.**

@@ -8,7 +8,7 @@
 // Placement: tags, written words and insets stay out of the subtitle box (tallest subtitle while they show), off the edges and header, clear of
 // cards, tri bands and the faces of the current shot (assets/faces.json through the push/pull), searching the nearest free spot.
 // `mark` underlines a spoken word inside the subtitle (gap filler; tools/fill_marks.py).
-const XB = { list: [], align: {}, regions: {}, ready: false };
+const XB = { list: [], align: {}, regions: {}, ready: false, crowded: [] };
 const TEA = "#7a5a32";
 
 function xbJ(p) { const x = new XMLHttpRequest(); x.open("GET", p, false); x.send(); return x.status === 200 ? JSON.parse(x.responseText) : {}; }
@@ -82,12 +82,7 @@ function xbRect(img, name, t) {
   const w = R.w, h = R.h, [z, fx, fy] = kenOf(sh, t), s = Math.max(W / w, H / h) * z, dw = w * s, dh = h * s, ox = (W - dw) * fx, oy = (H - dh) * fy;
   return [ox + box[0] * dw, oy + box[1] * dh, ox + box[2] * dw, oy + box[3] * dh];
 }
-function xbWhere(b, t) {   // the screen point is fixed at first draw: following the box let a later push carry a fading tag off screen
-  if (b.whAt) return b.whAt;
-  const w = xbWhere0(b, t); if (w && t >= b.t) b.whAt = w;
-  return w;
-}
-function xbWhere0(b, t) {
+function xbWhere(b, t) {
   if (b.pos) return [b.pos[0] * W, b.pos[1] * H];
   const r = xbRect(b.img, b.box, t); if (!r) return null;
   const sd = b.side || "top";
@@ -106,39 +101,85 @@ function xbSubTop(g, t0, t1) {
   }
   return top;
 }
-function xbLifeObs(b) {   // cards, tri bands, circles and strikes that show during this reaction's life: avoided on first placement
-  const o = [], t0 = b.t - 0.1, t1 = b.t1 + 0.4;
-  o.push(...cardsForBeats(t0, t1));
+// Placement: every tag, written word and inset is placed once, in time order, before it is drawn. Placing on the first frame that happened
+// to draw it gave different layouts for a chunked render, a sequential check and a single still; and avoiding only the faces of that one
+// frame let a later push slide a face under the tag. Each reaction sees the ones placed before it and avoids, over its whole life, the faces
+// (sampled every 0.25 s through the push/pull), cards, tri bands, circles and strikes.
+function xbTagSize(g, b) {
+  const fs = b.size || 38, efs = Math.round(fs * 0.58); font(g, fs, MIND); let w = g.measureText(b.text).width + 44;
+  if (b.en) { font(g, efs, LAT); w = Math.max(w, g.measureText(b.en).width + 44); }
+  return [w, fs + 26 + (b.en ? efs + 10 : 0)];
+}
+function xbInsetSrc(b) {   // -> [image, sx, sy, sw, sh, shown width, shown height]
+  const im = IMG["img:" + b.img]; if (!im) return null;
+  let sx = 0, sy = 0, sw = im.width, sh = im.height;
+  if (b.cols) { sw = im.width / b.cols; sx = sw * b.cell; }
+  if (b.box) { const r = XB.regions[b.img]?.r?.[b.box]; if (r) { sx = r[0] * im.width; sy = r[1] * im.height; sw = (r[2] - r[0]) * im.width; sh = (r[3] - r[1]) * im.height; } }
+  const w = Math.min(b.w || 420, (b.hmax || 300) * sw / sh);
+  return [im, sx, sy, sw, sh, w, w * sh / sw];
+}
+function xbBox(g, b, t) {   // anchor point and footprint before moving; null when the box's image is not on screen
+  if (b.do === "inset") {
+    const src = xbInsetSrc(b); if (!src) return null; const [w, h] = src.slice(5), wh = [b.pos[0] * W, b.pos[1] * H];
+    return [wh, [wh[0] - w / 2 - 12, wh[1] - h / 2 - 12, wh[0] + w / 2 + 12, wh[1] + h / 2 + 12 + (b.caption ? 60 : 0) + (b.en ? 34 : 0)]];
+  }
+  let wh = xbWhere(b, t); if (!wh) return null;
+  if (b.do === "write") {
+    const size = b.size || 96, efs = Math.round(clamp(size * 0.22, 22, 34)); font(g, efs, LAT);
+    const hw = (Math.max([...b.text].length * size * 1.02, b.en ? g.measureText(b.en).width : 0) + 60) / 2;
+    return [wh, [wh[0] - hw, wh[1] - size * 0.75, wh[0] + hw, wh[1] + size * 0.75 + (b.en ? efs + 18 : 0)]];
+  }
+  const [w, h] = xbTagSize(g, b);
+  if (b.side === "bottom") {
+    if (b.img) wh = [wh[0], wh[1] - 52 + 18 + h];   // pinned below a box: the tag's top sits 18 px under it, so a circle on the box never strikes it
+    if (wh[1] > xbSubTop(g, b.t - 0.1, b.t1 + 0.6) - 14) wh = xbWhere({ ...b, side: "top" }, t) || wh;   // would reach the subtitle: pin above
+  }
+  return [wh, [wh[0] - w / 2, wh[1] - h, wh[0] + w / 2, wh[1]]];
+}
+function xbLifeObs(b, t0, t1) {   // cards, tri bands, circles, strikes and faces that show between t0 and t1
+  const o = cardsForBeats(t0, t1);
   if (typeof TRIS !== "undefined") for (const c of TRIS) if (c.t0 - 0.2 < t1 && c.t1 + 0.4 > t0) o.push(c.mode === "band" ? [0, 760, W, H] : [40, 86, 1240, 356]);
   for (const c of XB.list) {
     if (c === b || (c.do !== "circle" && c.do !== "strike") || c.t > t1 || c.t1 < t0) continue;
-    const q = c.rect ? c.rect.map((v, i) => v * (i % 2 ? H : W)) : c.img && c.box ? xbRect(c.img, c.box, c.t + 0.3) : null;
-    if (q) o.push([q[0] - 22, q[1] - 18, q[2] + 22, q[3] + 18]);
+    if (b.img && c.img === b.img && c.box === b.box) continue;   // a tag pinned to a box does not flee that box's own circle (it ended up next to something else)
+    const pad = q => o.push([q[0] - 22, q[1] - 18, q[2] + 22, q[3] + 18]);
+    if (c.rect) { pad(c.rect.map((v, i) => v * (i % 2 ? H : W))); continue; }
+    for (let ts = Math.max(t0, c.t); ts <= Math.min(t1, c.t1 + 0.5); ts += 0.25) { const q = c.img && c.box && xbRect(c.img, c.box, ts); if (q) pad(q); }   // the circle grows with a push
+  }
+  for (let ts = t0; ts <= t1; ts += 0.25) {   // faces (assets/faces.json) through the push/pull; not under a paper wash
+    if (XB.papers.some(p => ts >= p.t && ts < p.t1 + 0.3)) continue;
+    const sh = SHOTS.find(s => s.type === "scene" && !s.sum && ts >= s.t0 && ts < s.t1), fc = sh && typeof facesOf === "function" && facesOf(sh.img); if (!fc) continue;
+    const [z, fx, fy] = kenOf(sh, ts), k = Math.max(W / fc.w, H / fc.h) * z, dw = fc.w * k, dh = fc.h * k, ox = (W - dw) * fx, oy = (H - dh) * fy;
+    for (const f of fc.f) o.push([ox + f[0] * dw - 16, oy + f[1] * dh - 16, ox + f[2] * dw + 16, oy + f[3] * dh + 16]);
   }
   return o;
 }
-function xbFit(g, b, x0, y0, x1, y1) {   // placed once on first draw, then kept: re-fitting every frame made labels jump when other layers came and went
-  const L = 24, T = 64, R = W - 24, B = (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14;
-  const bx = x0 < L ? L - x0 : x1 > R ? R - x1 : 0, by = y1 > B ? Math.max(T - y0, B - y1) : y0 < T ? T - y0 : 0;
-  if (b.fitAt) { XB.placed.push([x0 + b.fitAt[0], y0 + b.fitAt[1], x1 + b.fitAt[0], y1 + b.fitAt[1]]); return b.fitAt; }
-  const obs = [...XB.placed, ...xbLifeObs(b)];
-  const free = (dx, dy) => x0 + dx >= L - 0.5 && x1 + dx <= R + 0.5 && y0 + dy >= T - 0.5 && y1 + dy <= B + 0.5 && !obs.some(p => x0 + dx < p[2] + 6 && x1 + dx > p[0] - 6 && y0 + dy < p[3] + 6 && y1 + dy > p[1] - 6);
-  let best = [bx, by];
-  if (!free(bx, by)) {
-    const C = [];
-    for (let ix = -8; ix <= 8; ix++) for (let iy = -10; iy <= 10; iy++) C.push([bx + ix * 60, by + iy * 30]);
-    C.sort((a, b) => Math.hypot(a[0] - bx, (a[1] - by) * 1.4) - Math.hypot(b[0] - bx, (b[1] - by) * 1.4));
-    best = C.find(c => free(c[0], c[1])) || best;
+function xbPlace(g, t) {   // place, in time order, every reaction starting by t; placed ones never move
+  XB.papers ??= XB.list.filter(p => p.do === "paper");
+  for (const b of XB.list) {
+    if (b.t - 0.05 > t || b.pt !== undefined || !["write", "tag", "inset"].includes(b.do)) continue;
+    const t0 = b.t - 0.05, t1 = Math.min(b.t1 + 0.6, b.cut ?? Infinity);
+    let bx = null; for (const ts of [b.t, b.t + 0.3, b.t + 0.6]) if (ts < t1 && (bx = xbBox(g, b, ts))) break;
+    if (!bx) { b.pt = null; continue; }
+    const [[ax, ay], [x0, y0, x1, y1]] = bx;
+    const L = 24, T = 64, R = W - 24, B = xbSubTop(g, t0, t1) - 14;   // safe area: on screen, below the header, above the tallest subtitle of the life
+    const bx0 = x0 < L ? L - x0 : x1 > R ? R - x1 : 0, by0 = y1 > B ? Math.max(T - y0, B - y1) : y0 < T ? T - y0 : 0;
+    const obs = [...XB.list.filter(p => p.rect && p.t - 0.05 < t1 && p.life > t0).map(p => p.rect), ...xbLifeObs(b, t0, t1)];
+    const inside = (dx, dy) => x0 + dx >= L - 0.5 && x1 + dx <= R + 0.5 && y0 + dy >= T - 0.5 && y1 + dy <= B + 0.5;
+    const free = (dx, dy) => inside(dx, dy) && !obs.some(p => x0 + dx < p[2] + 6 && x1 + dx > p[0] - 6 && y0 + dy < p[3] + 6 && y1 + dy > p[1] - 6);
+    const cover = ([dx, dy]) => obs.reduce((s, p) => s + Math.max(0, Math.min(x1 + dx, p[2]) - Math.max(x0 + dx, p[0])) * Math.max(0, Math.min(y1 + dy, p[3]) - Math.max(y0 + dy, p[1])), 0);
+    const C = [];   // nearest fully free spot, searching outward in every direction
+    for (let ix = -14; ix <= 14; ix++) for (let iy = -16; iy <= 16; iy++) C.push([bx0 + ix * 60, by0 + iy * 30]);
+    C.sort((a, c) => Math.hypot(a[0] - bx0, (a[1] - by0) * 1.4) - Math.hypot(c[0] - bx0, (c[1] - by0) * 1.4));
+    let d = C.find(c => free(c[0], c[1]));
+    if (!d) { d = C.filter(c => inside(c[0], c[1])).reduce((m, c) => cover(c) < cover(m) ? c : m, [bx0, by0]); XB.crowded.push(`${b.sec}#${b.k} ${b.do} "${b.text || b.caption || b.img}" @${b.t.toFixed(2)}`); }   // no free spot: least covered one, reported by qc_layout
+    b.pt = [ax + d[0], ay + d[1]]; b.rect = [x0 + d[0], y0 + d[1], x1 + d[0], y1 + d[1]]; b.life = t1;
   }
-  XB.placed.push([x0 + best[0], y0 + best[1], x1 + best[0], y1 + best[1]]);
-  b.fitAt = best;
-  return best;
 }
 function xbPaperPatch(g, x, y, w, h, a) { g.save(); g.globalAlpha = a * 0.86; g.shadowColor = "rgba(40,30,20,0.25)"; g.shadowBlur = 24; g.fillStyle = PAPER; g.fillRect(x, y, w, h); g.restore(); }
 function xbWrite(g, b, t) {
-  const wh = xbWhere(b, t); if (!wh) return; const size = b.size || 96, s = [...b.text], gap = size * 1.02, a = 1 - sat((t - b.t1) / 0.5);
+  if (!b.pt) return; const [x, y] = b.pt, size = b.size || 96, s = [...b.text], gap = size * 1.02, a = 1 - sat((t - b.t1) / 0.5);
   const efs = Math.round(clamp(size * 0.22, 22, 34)); font(g, efs, LAT); const ew = b.en ? g.measureText(b.en).width : 0;
-  const hw = (Math.max(s.length * gap, ew) + 60) / 2, [fx, fy] = xbFit(g, b, wh[0] - hw, wh[1] - size * 0.75, wh[0] + hw, wh[1] + size * 0.75 + (b.en ? efs + 18 : 0)), x = wh[0] + fx, y = wh[1] + fy;
   if (b.patch !== false) { const pw = Math.max(s.length * gap, ew) + 60; xbPaperPatch(g, x - pw / 2, y - size * 0.75, pw, size * 1.5 + (b.en ? efs + 18 : 0), a * sat((t - b.t + 0.1) / 0.3)); }
   g.save(); g.globalAlpha = a;
   let tt = b.t;
@@ -185,14 +226,8 @@ function xbCircle(g, b, t) {
   xbInk(g, pts, k, b.color === "tea" ? TEA : CINNABAR, 11, sd, a);
 }
 function xbTag(g, b, t) {
-  let wh = xbWhere(b, t); if (!wh) return; const a = eOut((t - b.t) / 0.35) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
-  const fs = b.size || 38, efs = Math.round(fs * 0.58); font(g, fs, MIND); let w = g.measureText(b.text).width + 44;
-  if (b.en) { font(g, efs, LAT); w = Math.max(w, g.measureText(b.en).width + 44); }
-  const eh = b.en ? efs + 10 : 0, h = fs + 26 + eh, col = b.color === "red" ? RED : TEA;
-  if (b.side === "bottom" && b.img) wh = [wh[0], wh[1] - 52 + 18 + h];
-  if (b.flipTop === undefined) b.flipTop = b.side === "bottom" && wh[1] > (b.subTop ??= xbSubTop(g, b.t - 0.1, b.t1 + 0.6)) - 14;   // decided once
-  if (b.flipTop) wh = xbWhere0({ ...b, side: "top" }, t) || wh;
-  const [fx, fy] = xbFit(g, b, wh[0] - w / 2, wh[1] - h, wh[0] + w / 2, wh[1]), x = wh[0] + fx, y = wh[1] + fy;
+  if (!b.pt) return; const a = eOut((t - b.t) / 0.35) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
+  const fs = b.size || 38, efs = Math.round(fs * 0.58), [w, h] = xbTagSize(g, b), eh = b.en ? efs + 10 : 0, col = b.color === "red" ? RED : TEA, [x, y] = b.pt;
   const yy = y - h * (1 - eOut((t - b.t) / 0.35)) * 0.3;
   g.save(); g.globalAlpha = a * 0.93; g.fillStyle = PAPER; g.shadowColor = "rgba(30,20,10,0.3)"; g.shadowBlur = 16; g.fillRect(x - w / 2, yy - h, w, h); g.shadowBlur = 0;
   g.fillStyle = col; g.fillRect(x - w / 2, yy - h, 6, h); g.restore();
@@ -200,13 +235,8 @@ function xbTag(g, b, t) {
   xbEn(g, b.en, x + 3, yy - 14, efs, a);
 }
 function xbInset(g, b, t) {
-  const im = IMG["img:" + b.img]; if (!im) return;
-  const a = eOut((t - b.t) / 0.45) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
-  let sx = 0, sy = 0, sw = im.width, sh2 = im.height;
-  if (b.cols) { sw = im.width / b.cols; sx = sw * b.cell; }
-  if (b.box) { const r = XB.regions[b.img]?.r?.[b.box]; if (r) { sx = r[0] * im.width; sy = r[1] * im.height; sw = (r[2] - r[0]) * im.width; sh2 = (r[3] - r[1]) * im.height; } }
-  const hmax = b.hmax || 300, w = Math.min(b.w || 420, hmax * sw / sh2), h = w * sh2 / sw, dy = (1 - eOut((t - b.t) / 0.45)) * 60;
-  const [fx, fy] = xbFit(g, b, b.pos[0] * W - w / 2 - 12, b.pos[1] * H - h / 2 - 12, b.pos[0] * W + w / 2 + 12, b.pos[1] * H + h / 2 + 12 + (b.caption ? 60 : 0) + (b.en ? 34 : 0)), cx = b.pos[0] * W + fx, cy = b.pos[1] * H + fy;
+  if (!b.pt) return; const a = eOut((t - b.t) / 0.45) * (1 - sat((t - b.t1) / 0.5)); if (a <= 0) return;
+  const [im, sx, sy, sw, sh2, w, h] = xbInsetSrc(b), [cx, cy] = b.pt, dy = (1 - eOut((t - b.t) / 0.45)) * 60;
   g.save(); g.globalAlpha = a; g.shadowColor = "rgba(30,20,10,0.35)"; g.shadowBlur = 26; g.fillStyle = PAPER; g.fillRect(cx - w / 2 - 12, cy - h / 2 - 12 + dy, w + 24, h + 24); g.shadowBlur = 0;
   g.drawImage(im, sx, sy, sw, sh2, cx - w / 2, cy - h / 2 + dy, w, h); g.restore();
   if (b.caption) { font(g, 30, MIND); const cw = Math.max(g.measureText(b.caption).width, b.en ? (font(g, 22, LAT), g.measureText(b.en).width) : 0) + 36;   // paper backing: unreadable on dark images
@@ -265,16 +295,7 @@ function xbBoard2(g, b, t) {
 const XB_DRAW = { write: xbWrite, strike: xbStrike, circle: xbCircle, tag: xbTag, inset: xbInset, slot: xbSlot, paper: xbPaper, formula: xbFormula, board2: xbBoard2 };
 const XB_ORDER = ["paper", "inset", "formula", "board2", "write", "tag", "circle", "strike", "slot"];   // written words before tags so a tag sees them
 function xbDraw(g, t) {
-  xbInit(); XB.placed = [];
-  const sh = SHOTS.find(s => s.type === "scene" && !s.sum && t >= s.t0 && t < s.t1), fc = sh && typeof facesOf === "function" && facesOf(sh.img);
-  const papered = XB.list.some(b => b.do === "paper" && t >= b.t && t < b.t1 + 0.3);
-  if (fc && !papered) {
-    const [z, fx, fy] = kenOf(sh, t), k = Math.max(W / fc.w, H / fc.h) * z, dw = fc.w * k, dh = fc.h * k, ox = (W - dw) * fx, oy = (H - dh) * fy;
-    for (const f of fc.f) XB.placed.push([ox + f[0] * dw - 16, oy + f[1] * dh - 16, ox + f[2] * dw + 16, oy + f[3] * dh + 16]);
-  }
-  if (typeof TRIS !== "undefined") for (const c of TRIS) if (t >= c.t0 - 0.2 && t < c.t1 + 0.4) XB.placed.push(c.mode === "band" ? [0, 760, W, H] : [40, 86, 1240, 356]);
-  if (typeof cardsInit === "function") { cardsInit(); for (const c of CARDS) if (t >= c.t0 - 0.2 && t < c.t1 + 0.4) {
-    const k = c.compact ? 0.8 : 1, [x, y] = c.compact ? [W - 600 * k - 34, 58] : c.pos; XB.placed.push([x - 10, y - 10, x + 600 * k + 10, y + 250 * k + 10]); } }
+  xbInit(); if (typeof cardsInit === "function") cardsInit(); xbPlace(g, t);
   for (const kind of XB_ORDER) for (const b of XB.list) if (b.do === kind && t >= b.t - 0.05 && t < b.t1 + 0.6 && !(b.cut && t >= b.cut)) XB_DRAW[kind](g, b, t);
 }
 let xbPre = null;
