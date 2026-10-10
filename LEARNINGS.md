@@ -2,6 +2,16 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-10 — pauses are part of the rhythm
+
+- **A 2.5 s freeze limit flagged deliberate pauses.** A calligraphy shot that let two tags sit for three seconds failed delivery and cost
+  a full re-render. Frozen now means 4 s of identical frames.
+- **The author marks the pauses that are meant.** A `hold` beat (`{do: "hold", sec, k, at, len}`) says "this stillness is on purpose":
+  `beat_gaps` does not count it as a gap and writes its span to `qc/holds.json`, which `verify` exempts. Mark it while writing the beats,
+  not after a failed render.
+- **Check only what changed.** After editing a few lines, run `qc_layout` on that time range (`qc_layout.py <project> 0.5 <from> <to>`)
+  instead of the whole film; `beat_gaps` runs before rendering and catches most static stretches in seconds.
+
 ## 2026-10-10 — place everything in time order, before drawing
 
 - **"Placed on its first frame" is not deterministic.** The first frame that draws a reaction differs between a chunked render (each worker

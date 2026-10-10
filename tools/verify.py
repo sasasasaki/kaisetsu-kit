@@ -1,7 +1,8 @@
 # Delivery check before anything is published: full decode, loudness and true peak, black frames, frozen video,
 # SRT export, optional 720p review draft. Writes renders/verify.json; any failure exits 1 (do not publish).
 #   loudness: -16 LUFS +-1.0, true peak <= -0.5 dBTP (platforms normalize again; this only catches too quiet / clipping)
-#   freeze: freezedetect noise -60 dB for >= 2.5 s; designed holds can be exempted in timeline.json "holds": [[t0, t1], ...]
+#   freeze: freezedetect noise -60 dB for >= 4 s (2.5 s flagged deliberate pauses on calligraphy shots); exempt: timeline.json "holds"
+#   and `hold` beats the author marked (qc/holds.json, written by beat_gaps)
 # usage: python tools/verify.py <project> [--draft]
 import sys, re, subprocess
 from kit import REPO, project, rj, wj, probe_dur
@@ -26,8 +27,9 @@ m = ff('-i', str(MP4), '-vn', '-af', 'ebur128=peak=true', '-f', 'null', '-')
 I = float(re.findall(r'I:\s+(-?[\d.]+) LUFS', m)[-1]); TP = float(re.findall(r'Peak:\s+(-?[\d.]+) dBFS', m)[-1])
 rep['loudness_lufs'], rep['true_peak_dbtp'] = I, TP
 rep['loudness_ok'] = abs(I + 16) <= 1.0 and TP <= -0.5
-holds = TL.get('holds', [])
-fr = ff('-i', str(MP4), '-an', '-vf', 'freezedetect=n=-60dB:d=2.5,blackdetect=d=0.8:pix_th=0.05', '-f', 'null', '-')
+HJ = ROOT / 'qc/holds.json'
+holds = TL.get('holds', []) + (rj(HJ) if HJ.exists() else [])
+fr = ff('-i', str(MP4), '-an', '-vf', 'freezedetect=n=-60dB:d=4,blackdetect=d=0.8:pix_th=0.05', '-f', 'null', '-')
 fs = [float(x) for x in re.findall(r'freeze_start: ([\d.]+)', fr)]; fe = [float(x) for x in re.findall(r'freeze_end: ([\d.]+)', fr)]
 freezes = [[a, b] for a, b in zip(fs, fe + [dur] * (len(fs) - len(fe)))]
 bad = [f for f in freezes if not any(h[0] - 0.5 <= f[0] and f[1] <= h[1] + 0.5 for h in holds)]
