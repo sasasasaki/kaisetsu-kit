@@ -4,18 +4,36 @@ Techniques we picked up, newest first. Each entry says why it matters and how th
 
 ## 2026-10-15 — one in-story document as the whole stage
 
-- **A single page from the story's own world can carry a whole explainer.** A newspaper (or notice board, textbook page, letter) with a
-  headline, exactly three short stories and one pull quote already is an outline: "three stories today", then one section per story,
-  then the quote as the ending. The camera never leaves that page; comic panels rise out of the story they illustrate and sink back after.
-  No hard cuts, and the viewer always knows where they are in the outline.
-- **Marks stay on the page.** Circles and underlines drawn during the film are not erased, so the final pull-back to the full page shows
-  everything that was read. Draw them in an ink that belongs to the document's world (multiply blend on the paper).
-- **Every card over printed text needs an opaque ground.** Section names, labels and quote cards sat on top of the page's own body text;
-  any translucency made both unreadable.
-- **A quote card must stay readable for 3 s before anything covers it.** Bring it in at the start of its line, and push the next panel
-  back until it has had its time.
-- **Side characters that pop in take space, not just pixels.** While a talking bust is on screen the centre zone shrinks away from it
-  and focus, panels, quote cards and subtitles follow; retire any card that would be squeezed out before the bust starts talking.
+- **A single page from the story's own world can carry a whole explainer.** A newspaper (or notice, book page, scroll) is the stage: one
+  camera pushes and pulls over it in the page's own coordinates, eased, never a hard cut. The reviewer thought it may work even better
+  than our voiced motion comics, and that it fits many subjects besides comics. The kit cannot do it yet: `cam` pushes a cover-fitted
+  scene by 1.12–1.42×, so a portrait page is never seen whole (whole sheet to one sentence is about 4×), each new section bleeds in
+  through an ink mask, and the comic route's page camera has no beats layer.
+- **The layout is the outline.** A headline, exactly three short stories and one pull quote already say "three stories today", one section
+  per story, the quote as the ending, so the viewer always knows where they are. The page takes the place of the `gates` overview; name
+  its blocks in `assets/regions.json`.
+- **A quote card must stay readable for 3 s before anything covers it.** Circle the key sentence, then show it in the document's language
+  with the translation under it; bring the card in at the start of its line and hold the next panel back (the first review found one
+  covered by the next panel after 0.7 s). The kit's `tris` (zh / ja / en for a Chinese original) have no minimum time.
+- **Panels rise out of the story they illustrate and sink back.** A comic panel or illustration grows out of its story's block, may push
+  in for a detail, and shrinks back into that block at the section's end, the dimmed page still around it. The kit's `inset` only
+  slides a crop into a free spot.
+- **Marks stay on the page.** Circles, underlines and boxes in an ink of the document's world (multiply on the paper) are never erased, so
+  the final pull-back shows everything that was read. Keep them tight to the line: a circle that took in half a line above and below read
+  as a strike-through. The kit's `circle` pads its box 18 px across and 14 px up and down, and fades after its line.
+- **Every card over printed text needs an opaque ground.** Section names, labels and quote cards on the page's body text were unreadable
+  with any translucency, and `qc_layout` cannot see it (print is pixels, not drawn text): look at frames. Most grounds in the kit
+  (`tag`, `write`, subtitles) are 86–94% opaque; the section name in `chrome` has none.
+- **Side characters that pop in take space, not just pixels.** While a talking bust is on screen the centre zone shrinks away from it and
+  focus, panels, cards and subtitles follow; a card that would be squeezed out leaves 1.2 s before the bust talks (`qc_layout` caught one
+  running off its card). Stickers and new-word tags take three fixed slots per side margin and never the centre (the kit's `xbPlace`
+  searches for any free spot instead); report a full margin in `XB.crowded`, which `qc_layout` lists (entries end in `@<seconds>`).
+- **Every line still reacts, and the meant silences are marked.** A panel shown before anyone speaks, or the pause after a punchline, is a
+  `hold`. `beat_gaps.py` counts every beat except `rest` / `hold` / `clear`, so new kinds count as they are, and `hold` spans reach
+  `verify`; silence before a line is `pre` on its section, which `plan.py` reads and `board.py` cannot set yet.
+- **Suggested beats (not in the kit yet).** A `doc` shot in page pixels that spans sections; `cam {view, into}` that fits the whole sheet
+  or one sentence into the centre zone or its left half; `ink {circle|under|box}` kept to the end; `quote {orig, tr, keep}`; opaque grounds;
+  `panel {img, box, slot: c|l|r, origin}`, `pzoom {box}`, `unpanel`; `bust {pose, side}`; `sticker` and `word` in margin slots.
 
 ## 2026-10-10 — pauses are part of the rhythm
 
