@@ -7,17 +7,19 @@ Techniques we picked up, newest first. Each entry says why it matters and how th
 - **A single page from the story's own world can carry a whole explainer.** A newspaper (or notice, book page, scroll) is the stage: one
   camera pushes and pulls over it in the page's own coordinates, eased, never a hard cut. The reviewer thought it may work even better
   than our voiced motion comics, and that it fits many subjects besides comics. The kit cannot do it yet: `cam` pushes a cover-fitted
-  scene by 1.12–1.42×, so a portrait page is never seen whole (whole sheet to one sentence is about 4×), each new section bleeds in
-  through an ink mask, and the comic route's page camera has no beats layer.
-- **The layout is the outline.** A headline, exactly three short stories and one pull quote already say "three stories today", one section
-  per story, the quote as the ending, so the viewer always knows where they are. The page takes the place of the `gates` overview; name
-  its blocks in `assets/regions.json`.
+  scene by 1.12–1.42×, so under `cam` a portrait page is never seen whole (whole sheet to one sentence is about 4×; summary illustrations
+  and `manga` shots show a page whole but cannot push or pull), each new section bleeds in through an ink mask, and the comic route's
+  page camera has no beats layer.
+- **The layout is the outline.** A title, exactly three blocks and one closing line already say "three things today" (newspaper: headline,
+  three short stories, pull quote; notice: title, three articles, closing line; textbook page or scroll: heading, three sections or
+  passages, the key sentence), one section per block, the closing line as the ending, so the viewer always knows where they are. The page
+  takes the place of the `gates` overview; name its blocks in `assets/regions.json`.
 - **A quote card must stay readable for 3 s before anything covers it.** Circle the key sentence, then show it in the document's language
   with the translation under it; bring the card in at the start of its line and hold the next panel back (the first review found one
   covered by the next panel after 0.7 s). The kit's `tris` (zh / ja / en for a Chinese original) have no minimum time.
-- **Panels rise out of the story they illustrate and sink back.** A comic panel or illustration grows out of its story's block, may push
-  in for a detail, and shrinks back into that block at the section's end, the dimmed page still around it. The kit's `inset` only
-  slides a crop into a free spot.
+- **Panels rise out of the page and sink back.** A comic panel or illustration grows out of the block it illustrates, may push in for a
+  detail, and shrinks back into that block at the section's end, the dimmed page still around it. The kit's `inset` only slides a crop
+  into a free spot.
 - **Marks stay on the page.** Circles, underlines and boxes in an ink of the document's world (multiply on the paper) are never erased, so
   the final pull-back shows everything that was read. Keep them tight to the line: a circle that took in half a line above and below read
   as a strike-through. The kit's `circle` pads its box 18 px across and 14 px up and down, and fades after its line.
@@ -29,11 +31,13 @@ Techniques we picked up, newest first. Each entry says why it matters and how th
   running off its card). Stickers and new-word tags take three fixed slots per side margin and never the centre (the kit's `xbPlace`
   searches for any free spot instead); report a full margin in `XB.crowded`, which `qc_layout` lists (entries end in `@<seconds>`).
 - **Every line still reacts, and the meant silences are marked.** A panel shown before anyone speaks, or the pause after a punchline, is a
-  `hold`. `beat_gaps.py` counts every beat except `rest` / `hold` / `clear`, so new kinds count as they are, and `hold` spans reach
-  `verify`; silence before a line is `pre` on its section, which `plan.py` reads and `board.py` cannot set yet.
-- **Suggested beats (not in the kit yet).** A `doc` shot in page pixels that spans sections; `cam {view, into}` that fits the whole sheet
-  or one sentence into the centre zone or its left half; `ink {circle|under|box}` kept to the end; `quote {orig, tr, keep}`; opaque grounds;
-  `panel {img, box, slot: c|l|r, origin}`, `pzoom {box}`, `unpanel`; `bust {pose, side}`; `sticker` and `word` in margin slots.
+  `hold`, not a `rest`: a `rest` never reaches `verify`, so a still stretch of 4 s or more there fails as frozen, while `hold` spans go to
+  `qc/holds.json`, which `verify` exempts. `beat_gaps.py` counts every beat except `rest` / `hold` / `clear`, so new kinds count as they
+  are; silence before a line is `pre` on its section, which `plan.py` reads and `board.py` cannot set yet.
+- **Suggested beats (not in the kit yet).** A `doc` shot in page pixels that spans sections; `cam` extended with `{view, into}` to fit the
+  whole sheet or one sentence into the centre zone or its left half; `ink {circle|under|box}` kept to the end; `qcard {orig, tr, keep}` for
+  the quote card (`quote` is already a diagram); opaque grounds; `panel {img, box, slot: c|l|r, origin}`, `pzoom {box}`, `unpanel`;
+  `bust {pose, side}`; `sticker` and `word` in margin slots.
 
 ## 2026-10-10 — pauses are part of the rhythm
 
