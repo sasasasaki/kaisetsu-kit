@@ -2,6 +2,21 @@
 
 Techniques we picked up, newest first. Each entry says why it matters and how the kit enforces it.
 
+## 2026-10-15 — one in-story document as the whole stage
+
+- **A single page from the story's own world can carry a whole explainer.** A newspaper (or notice board, textbook page, letter) with a
+  headline, exactly three short stories and one pull quote already is an outline: "three stories today", then one section per story,
+  then the quote as the ending. The camera never leaves that page; comic panels rise out of the story they illustrate and sink back after.
+  No hard cuts, and the viewer always knows where they are in the outline.
+- **Marks stay on the page.** Circles and underlines drawn during the film are not erased, so the final pull-back to the full page shows
+  everything that was read. Draw them in an ink that belongs to the document's world (multiply blend on the paper).
+- **Every card over printed text needs an opaque ground.** Section names, labels and quote cards sat on top of the page's own body text;
+  any translucency made both unreadable.
+- **A quote card must stay readable for 3 s before anything covers it.** Bring it in at the start of its line, and push the next panel
+  back until it has had its time.
+- **Side characters that pop in take space, not just pixels.** While a talking bust is on screen the centre zone shrinks away from it
+  and focus, panels, quote cards and subtitles follow; retire any card that would be squeezed out before the bust starts talking.
+
 ## 2026-10-10 — pauses are part of the rhythm
 
 - **A 2.5 s freeze limit flagged deliberate pauses.** A calligraphy shot that let two tags sit for three seconds failed delivery and cost
